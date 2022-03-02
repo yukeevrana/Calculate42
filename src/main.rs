@@ -38,21 +38,20 @@ impl Calc {
     fn take_message(&mut self, message: String) -> Result<colored::ColoredString, &str> {
         self.buffer = message.clone();
 
-        // TODO Move output from command match to color match. Change buffer in command match instead.
         match self.buffer.as_str() {
-            "exit" => Err("exit"),
-            "clear color" => { self.output_color = String::from("default"); Ok(String::from("Done").white()) },
-            "blue" => { self.output_color = String::from("blue"); Ok(String::from("Done").blue()) },
-            "green" => { self.output_color = String::from("green"); Ok(String::from("Done").green()) },
-            "red" => { self.output_color = String::from("red"); Ok(String::from("Done").red()) },
-            _ => {
-                match self.output_color.as_str() {
-                    "blue" => Ok(self.buffer.blue()),
-                    "green" => Ok(self.buffer.green()),
-                    "red" => Ok(self.buffer.red()),
-                    _ => Ok(self.buffer.white())
-                }
+            "exit" => return Err("exit"),
+            color if color == "default color" || color == "blue" || color == "green" || color == "red" => {
+                self.output_color = String::from(color);
+                self.buffer = String::from("Done");
             }
+            _ => {}
+        }
+        
+        match self.output_color.as_str() {
+            "blue" => Ok(self.buffer.blue()),
+            "green" => Ok(self.buffer.green()),
+            "red" => Ok(self.buffer.red()),
+            _ => Ok(self.buffer.white())
         }
     }
 }
