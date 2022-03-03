@@ -46,13 +46,56 @@ impl Calc {
             }
             _ => {}
         }
-        
+
+        match self.try_parse_math_expr() {
+            Err(_) => {},
+            Ok(_) => {}
+        };
+
         match self.output_color.as_str() {
             "blue" => Ok(self.buffer.blue()),
             "green" => Ok(self.buffer.green()),
             "red" => Ok(self.buffer.red()),
             _ => Ok(self.buffer.white())
         }
+    }
+
+    fn try_parse_math_expr(&mut self) -> Result<String, &str> {
+        let mut res = String::new();
+        let mut st = Vec::new();
+
+        for ch in self.buffer.chars() {
+            match ch {
+                // "(" => st.push(grapheme),
+                // ")" => {
+                //     while st.last() != Some(&"(") {
+                //         res.push(st.pop().unwrap());
+                //     } 
+                //     st.pop();
+                // },
+                '+' => {
+                    if st.last() == Some(&'+') {
+                        res.push(st.pop().unwrap());
+                    }
+                    st.push(ch);
+                }
+                number => {
+                    let n = ch.to_digit(10);
+                    match n {
+                        None => { return Err("Parsing error"); },
+                        _ => { res.push(number); }
+                    }
+                }
+            }
+        }
+
+        for ch in st.iter().rev() {
+            res.push(*ch);
+        }
+
+        self.buffer = res;
+
+        Ok(String::from(""))
     }
 }
 
