@@ -1,8 +1,10 @@
 use colored::Colorize;
+use regex;
 
 pub struct Calc {
     output_color: String,
     input: String,
+    commands: Vec<String>,
     output: String
 }
 
@@ -11,6 +13,7 @@ impl Calc {
         Calc {
             output_color: String::from("white"),
             input: String::new(),
+            commands: Vec::new(),
             output: String::new()
         }
     }
@@ -30,6 +33,25 @@ impl Calc {
         Ok(self.get_answer())
     }
 
+    fn split_input(&mut self) {
+        let re = regex::Regex::new(r"[0-9\-\(\)\+\*/]+").unwrap();
+
+        for splitted in self.input.split_whitespace() {
+            if re.is_match(splitted) {
+                match self.commands.last() {
+                    Some(w) if re.is_match(w) => { 
+                        let new_expr = String::from(format!("{w}{splitted}"));
+                        self.commands.pop();
+                        self.commands.push(new_expr);
+                    },
+                    _ => { self.commands.push(String::from(splitted)) }
+                }
+            } else {
+                self.commands.push(String::from(splitted))
+            }
+        }
+    }
+
     fn find_color_command(&mut self) {
         let color = self.input.as_str();
         if color == "black" || color == "red" || color == "green" || color == "yellow" || color == "blue" || 
@@ -39,6 +61,7 @@ impl Calc {
 
             self.output_color = String::from(color);
             self.output = String::from("Done");
+            self.input.clear();
         }
     }
 
@@ -105,7 +128,66 @@ impl Calc {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn find_color_command_correct_color() {
+    fn split_input_one_word() {
+        let mut calc = super::Calc::new();
+        assert_eq!(Vec::<String>::new(), calc.commands);
+
+        calc.input = String::from("word");
+        calc.split_input();
+
+        let mut res = Vec::new();
+        res.push("word");
+        assert_eq!(res, calc.commands);
+        assert_eq!(String::from("word"), calc.input);
+    }
+    
+    #[test]
+    fn split_input_words() {
+        let mut calc = super::Calc::new();
+        assert_eq!(Vec::<String>::new(), calc.commands);
+
+        calc.input = String::from("word and another word");
+        calc.split_input();
+
+        let mut res = Vec::new();
+        res.push("word");
+        res.push("and");
+        res.push("another");
+        res.push("word");
+        assert_eq!(res, calc.commands);
+        assert_eq!(String::from("word and another word"), calc.input);
+    }
+
+    #[test]
+    fn split_input_one_expr_without_whitespaces() {
+        let mut calc = super::Calc::new();
+        assert_eq!(Vec::<String>::new(), calc.commands);
+
+        calc.input = String::from("2+2*(2-2)/2");
+        calc.split_input();
+
+        let mut res = Vec::new();
+        res.push("2+2*(2-2)/2");
+        assert_eq!(res, calc.commands);
+        assert_eq!(String::from("2+2*(2-2)/2"), calc.input);
+    }
+
+    #[test]
+    fn split_input_one_expr_with_whitespaces() {
+        let mut calc = super::Calc::new();
+        assert_eq!(Vec::<String>::new(), calc.commands);
+
+        calc.input = String::from("2 + 2 * (2 - 2) / 2");
+        calc.split_input();
+
+        let mut res = Vec::new();
+        res.push("2+2*(2-2)/2");
+        assert_eq!(res, calc.commands);
+        assert_eq!(String::from("2 + 2 * (2 - 2) / 2"), calc.input);
+    }
+
+    #[test]
+    fn find_color_command_only_correct_color() {
 
         for color in [ "black", "red", "green", "yellow", "blue",
                     "magenta", "cyan", "white", "bright black", "bright red",
@@ -120,11 +202,12 @@ mod tests {
 
             assert_eq!(String::from(color), calc.output_color);
             assert_eq!(String::from("Done"), calc.output);
+            assert_eq!(String::from(""), calc.input);
         }
     }
 
     #[test]
-    fn find_color_command_incorrect_color() {
+    fn find_color_command_only_incorrect_color() {
 
         for color in [ "not a color at all", "rose", "purple", "exit", "another command" ] {
 
@@ -136,6 +219,7 @@ mod tests {
 
             assert_eq!(String::from("white"), calc.output_color);
             assert_eq!(String::new(), calc.output);
+            assert_eq!(String::from(color), calc.input);
         }
     }
 
