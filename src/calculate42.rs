@@ -1,69 +1,127 @@
-use colored::Colorize;
+// use colored::Colorize;
 use regex;
 
 pub struct Calc {
-    output_color: String,
+    // output_color: String,
     input: String,
-    commands: Vec<String>,
+    // commands: Vec<String>,
     output: String
 }
 
 impl Calc {
     pub fn new() -> Self {
         Calc {
-            output_color: String::from("white"),
+            // output_color: String::from("white"),
             input: String::new(),
-            commands: Vec::new(),
+            // commands: Vec::new(),
             output: String::new()
         }
     }
 
-    pub fn take_message(&mut self, message: String) -> Result<colored::ColoredString, &str> {
+    pub fn take_message(&mut self, message: String) -> Result<String, &str> {
         self.input = message.clone();
 
         if self.input.as_str() == "exit" { return Err("exit"); }
         
-        self.find_color_command();
+        // self.find_color_command();
 
         match self.find_math_expr() {
             Err(_) => {},
             Ok(_) => {}
         };
-
-        Ok(self.get_answer())
+        Err("")
+        // Ok(self.get_answer())
     }
 
-    fn split_input(&mut self) {
-        let re = regex::Regex::new(r"[0-9\-\(\)\+\*/]+").unwrap();
+    fn is_math_expr(message: &String) -> bool {
+        let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)]+$").unwrap();
 
-        for splitted in self.input.split_whitespace() {
-            if re.is_match(splitted) {
-                match self.commands.last() {
-                    Some(w) if re.is_match(w) => { 
-                        let new_expr = String::from(format!("{w}{splitted}"));
-                        self.commands.pop();
-                        self.commands.push(new_expr);
-                    },
-                    _ => { self.commands.push(String::from(splitted)) }
+        re.is_match(message.as_str())
+    }
+
+    fn try_convert(math_expr: &String) -> Option<Vec<String>> {
+        // let mut res = String::new();
+        let mut res = Vec::new();
+        let mut operand = String::new();
+
+        for ch in math_expr.chars() {
+            match ch {
+                number => {
+                    let n = ch.to_digit(10);
+                    match n {
+                        None => return None,
+                        _ => { 
+                            operand.push(number); 
+                        }
+                    }
                 }
-            } else {
-                self.commands.push(String::from(splitted))
+        //         // "(" => st.push(grapheme),
+        //         // ")" => {
+        //         //     while st.last() != Some(&"(") {
+        //         //         res.push(st.pop().unwrap());
+        //         //     } 
+        //         //     st.pop();
+        //         // },
+        //         '+' => {
+        //             if st.last() == Some(&'+') {
+        //                 res.push(st.pop().unwrap());
+        //             }
+        //             st.push(ch);
+        //         }
+        //         number => {
+        //             let n = ch.to_digit(10);
+        //             match n {
+        //                 None => { return Err("Parsing error"); },
+        //                 _ => { res.push(number); }
+        //             }
+        //         }
             }
         }
+        
+        res.push(operand);
+
+        Some(res)
+
+        // for ch in st.iter().rev() {
+        //     res.push(*ch);
+        // }
+
+        // self.input = res;
+
+        // Ok(String::from(""))
     }
 
-    fn find_color_command(&mut self) {
-        let color = self.input.as_str();
-        if color == "black" || color == "red" || color == "green" || color == "yellow" || color == "blue" || 
-            color == "magenta" || color == "cyan" || color == "white" || color == "bright black" || 
-            color == "bright red" || color == "bright green" || color == "bright yellow" || color == "bright blue" || 
-            color == "bright magenta" || color == "bright cyan" || color == "bright white" {
+    // fn split_input(&mut self) {
+    //     let re = regex::Regex::new(r"[0-9\-\(\)\+\*/]+").unwrap();
 
-            self.output_color = String::from(color);
-            self.output = String::from("Done");
-            self.input.clear();
-        }
-    }
+    //     for splitted in self.input.split_whitespace() {
+    //         if re.is_match(splitted) {
+    //             match self.commands.last() {
+    //                 Some(w) if re.is_match(w) => { 
+    //                     let new_expr = String::from(format!("{w}{splitted}"));
+    //                     self.commands.pop();
+    //                     self.commands.push(new_expr);
+    //                 },
+    //                 _ => { self.commands.push(String::from(splitted)) }
+    //             }
+    //         } else {
+    //             self.commands.push(String::from(splitted))
+    //         }
+    //     }
+    // }
+
+    // fn find_color_command(&mut self) {
+    //     let color = self.input.as_str();
+    //     if color == "black" || color == "red" || color == "green" || color == "yellow" || color == "blue" || 
+    //         color == "magenta" || color == "cyan" || color == "white" || color == "bright black" || 
+    //         color == "bright red" || color == "bright green" || color == "bright yellow" || color == "bright blue" || 
+    //         color == "bright magenta" || color == "bright cyan" || color == "bright white" {
+
+    //         self.output_color = String::from(color);
+    //         self.output = String::from("Done");
+    //         self.input.clear();
+    //     }
+    // }
 
     fn find_math_expr(&mut self) -> Result<String, &str> {
         let mut res = String::new();
@@ -103,193 +161,252 @@ impl Calc {
         Ok(String::from(""))
     }
 
-    fn get_answer(&self) -> colored::ColoredString {
-        match self.output_color.as_str() {
-            "blue"              => self.output.blue(),
-            "green"             => self.output.green(),
-            "red"               => self.output.red(),
-            "black"             => self.output.black(), 
-            "yellow"            => self.output.yellow(), 
-            "magenta"           => self.output.magenta(), 
-            "cyan"              => self.output.cyan(), 
-            "bright black"      => self.output.bright_black(), 
-            "bright red"        => self.output.bright_red(),
-            "bright green"      => self.output.bright_green(), 
-            "bright yellow"     => self.output.bright_yellow(), 
-            "bright blue"       => self.output.bright_blue(), 
-            "bright magenta"    => self.output.bright_magenta(),
-            "bright cyan"       => self.output.bright_cyan(), 
-            "bright white"      => self.output.bright_white(),
-            _                   => self.output.white()
-        }
-    }
+    // fn get_answer(&self) -> colored::ColoredString {
+    //     match self.output_color.as_str() {
+    //         "blue"              => self.output.blue(),
+    //         "green"             => self.output.green(),
+    //         "red"               => self.output.red(),
+    //         "black"             => self.output.black(), 
+    //         "yellow"            => self.output.yellow(), 
+    //         "magenta"           => self.output.magenta(), 
+    //         "cyan"              => self.output.cyan(), 
+    //         "bright black"      => self.output.bright_black(), 
+    //         "bright red"        => self.output.bright_red(),
+    //         "bright green"      => self.output.bright_green(), 
+    //         "bright yellow"     => self.output.bright_yellow(), 
+    //         "bright blue"       => self.output.bright_blue(), 
+    //         "bright magenta"    => self.output.bright_magenta(),
+    //         "bright cyan"       => self.output.bright_cyan(), 
+    //         "bright white"      => self.output.bright_white(),
+    //         _                   => self.output.white()
+    //     }
+    // }
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
-    fn split_input_one_word() {
-        let mut calc = super::Calc::new();
-        assert_eq!(Vec::<String>::new(), calc.commands);
+    fn is_math_expr_looks_like_math_expr_without_whitespaces() {
+        use super::*;
 
-        calc.input = String::from("word");
-        calc.split_input();
+        for message in ["2+2", "3*3", "4/4", "5-5", "1**1", "6//6", "7%7", ")8(8"] {
+            assert!(Calc::is_math_expr(&String::from(message)));
+        }
+    }
+
+    #[test]
+    fn is_math_expr_looks_like_math_expr_with_whitespaces() {
+        use super::*;
+
+        for message in ["2 + 2", "3 * 3", "4 /4", "5- 5", "1* *1", "6    //6", "7%   7", ") 8(    8"] {
+            assert!(Calc::is_math_expr(&String::from(message)));
+        }
+    }
+
+    #[test]
+    fn is_math_expr_definitely_not_math_expr() {
+        use super::*;
+
+        for message in ["2 + 2f", "3 kk* 3", "4 !/4", "5- ?5", "1* nana*1", "word", "another word", ""] {
+            assert_eq!(Calc::is_math_expr(&String::from(message)), false);
+        }
+    }
+
+    #[test]
+    fn try_convert_numbers() {
+        use super::*;
 
         let mut res = Vec::new();
-        res.push("word");
-        assert_eq!(res, calc.commands);
-        assert_eq!(String::from("word"), calc.input);
+        res.push(String::from("2387"));
+        assert_eq!(Calc::try_convert(&String::from("2387")), Some(res))
     }
+
+    // #[test]
+    // fn split_input_one_word() {
+    //     let mut calc = super::Calc::new();
+    //     assert_eq!(Vec::<String>::new(), calc.commands);
+
+    //     calc.input = String::from("word");
+    //     calc.split_input();
+
+    //     let mut res = Vec::new();
+    //     res.push("word");
+    //     assert_eq!(res, calc.commands);
+    //     assert_eq!(String::from("word"), calc.input);
+    // }
     
-    #[test]
-    fn split_input_words() {
-        let mut calc = super::Calc::new();
-        assert_eq!(Vec::<String>::new(), calc.commands);
+    // #[test]
+    // fn split_input_words() {
+    //     let mut calc = super::Calc::new();
+    //     assert_eq!(Vec::<String>::new(), calc.commands);
 
-        calc.input = String::from("word and another word");
-        calc.split_input();
+    //     calc.input = String::from("word and another word");
+    //     calc.split_input();
 
-        let mut res = Vec::new();
-        res.push("word");
-        res.push("and");
-        res.push("another");
-        res.push("word");
-        assert_eq!(res, calc.commands);
-        assert_eq!(String::from("word and another word"), calc.input);
-    }
+    //     let mut res = Vec::new();
+    //     res.push("word");
+    //     res.push("and");
+    //     res.push("another");
+    //     res.push("word");
+    //     assert_eq!(res, calc.commands);
+    //     assert_eq!(String::from("word and another word"), calc.input);
+    // }
 
-    #[test]
-    fn split_input_one_expr_without_whitespaces() {
-        let mut calc = super::Calc::new();
-        assert_eq!(Vec::<String>::new(), calc.commands);
+    // #[test]
+    // fn split_input_one_expr_without_whitespaces() {
+    //     let mut calc = super::Calc::new();
+    //     assert_eq!(Vec::<String>::new(), calc.commands);
 
-        calc.input = String::from("2+2*(2-2)/2");
-        calc.split_input();
+    //     calc.input = String::from("2+2*(2-2)/2");
+    //     calc.split_input();
 
-        let mut res = Vec::new();
-        res.push("2+2*(2-2)/2");
-        assert_eq!(res, calc.commands);
-        assert_eq!(String::from("2+2*(2-2)/2"), calc.input);
-    }
+    //     let mut res = Vec::new();
+    //     res.push("2+2*(2-2)/2");
+    //     assert_eq!(res, calc.commands);
+    //     assert_eq!(String::from("2+2*(2-2)/2"), calc.input);
+    // }
 
-    #[test]
-    fn split_input_one_expr_with_whitespaces() {
-        let mut calc = super::Calc::new();
-        assert_eq!(Vec::<String>::new(), calc.commands);
+    // #[test]
+    // fn split_input_one_expr_with_whitespaces() {
+    //     let mut calc = super::Calc::new();
+    //     assert_eq!(Vec::<String>::new(), calc.commands);
 
-        calc.input = String::from("2 + 2 * (2 - 2) / 2");
-        calc.split_input();
+    //     calc.input = String::from("2 + 2 * (2 - 2) / 2");
+    //     calc.split_input();
 
-        let mut res = Vec::new();
-        res.push("2+2*(2-2)/2");
-        assert_eq!(res, calc.commands);
-        assert_eq!(String::from("2 + 2 * (2 - 2) / 2"), calc.input);
-    }
+    //     let mut res = Vec::new();
+    //     res.push("2+2*(2-2)/2");
+    //     assert_eq!(res, calc.commands);
+    //     assert_eq!(String::from("2 + 2 * (2 - 2) / 2"), calc.input);
+    // }
 
-    #[test]
-    fn find_color_command_only_correct_color() {
+    // #[test]
+    // fn split_input_words_and_expres() {
+    //     let mut calc = super::Calc::new();
+    //     assert_eq!(Vec::<String>::new(), calc.commands);
 
-        for color in [ "black", "red", "green", "yellow", "blue",
-                    "magenta", "cyan", "white", "bright black", "bright red",
-                    "bright green", "bright yellow", "bright blue", "bright magenta",
-                    "bright cyan", "bright white" ] {
+    //     calc.input = String::from("word and another 2 + 2 * word (2-2)/2 another 2 * 4");
+    //     calc.split_input();
 
-            let mut calc = super::Calc::new();
-            assert_eq!(String::from("white"), calc.output_color);
+    //     let mut res = Vec::new();
+    //     res.push("word");
+    //     res.push("and");
+    //     res.push("another");
+    //     res.push("2+2*");
+    //     res.push("word");
+    //     res.push("(2-2)/2");
+    //     res.push("another");
+    //     res.push("2*4");
+    //     assert_eq!(res, calc.commands);
+    //     assert_eq!(String::from("word and another 2 + 2 * word (2-2)/2 another 2 * 4"), calc.input);
+    // }
 
-            calc.input = String::from(color);
-            calc.find_color_command();
+    // #[test]
+    // fn find_color_command_only_correct_color() {
 
-            assert_eq!(String::from(color), calc.output_color);
-            assert_eq!(String::from("Done"), calc.output);
-            assert_eq!(String::from(""), calc.input);
-        }
-    }
+    //     for color in [ "black", "red", "green", "yellow", "blue",
+    //                 "magenta", "cyan", "white", "bright black", "bright red",
+    //                 "bright green", "bright yellow", "bright blue", "bright magenta",
+    //                 "bright cyan", "bright white" ] {
 
-    #[test]
-    fn find_color_command_only_incorrect_color() {
+    //         let mut calc = super::Calc::new();
+    //         assert_eq!(String::from("white"), calc.output_color);
 
-        for color in [ "not a color at all", "rose", "purple", "exit", "another command" ] {
+    //         let mut expected = Vec::new();
+    //         expected.push(String::from(color));
+    //         calc.commands = expected;
+    //         calc.find_color_command();
 
-            let mut calc = super::Calc::new();
-            assert_eq!(String::from("white"), calc.output_color);
+    //         assert_eq!(String::from(color), calc.output_color);
+    //         assert_eq!(String::from("Done"), calc.output);
+    //         assert_eq!(String::from(""), calc.input);
+    //     }
+    // }
 
-            calc.input = String::from(color);
-            calc.find_color_command();
+    // #[test]
+    // fn find_color_command_only_incorrect_color() {
 
-            assert_eq!(String::from("white"), calc.output_color);
-            assert_eq!(String::new(), calc.output);
-            assert_eq!(String::from(color), calc.input);
-        }
-    }
+    //     for color in [ "not a color at all", "rose", "purple", "exit", "another command" ] {
 
-    #[test]
-    fn get_answer_with_correct_color() {
-        use colored::Colorize;
+    //         let mut calc = super::Calc::new();
+    //         assert_eq!(String::from("white"), calc.output_color);
 
-        let mut calc = super::Calc::new();
-        assert_eq!(String::from("white"), calc.output_color);
+    //         calc.input = String::from(color);
+    //         calc.find_color_command();
 
-        calc.output = String::from("Some shiny output");
-        assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
+    //         assert_eq!(String::from("white"), calc.output_color);
+    //         assert_eq!(String::new(), calc.output);
+    //         assert_eq!(String::from(color), calc.input);
+    //     }
+    // }
 
-        calc.output_color = String::from("black");
-        assert_eq!(String::from("Some shiny output").black(), calc.get_answer());
+    // #[test]
+    // fn get_answer_with_correct_color() {
+    //     use colored::Colorize;
 
-        calc.output_color = String::from("green");
-        assert_eq!(String::from("Some shiny output").green(), calc.get_answer());
+    //     let mut calc = super::Calc::new();
+    //     assert_eq!(String::from("white"), calc.output_color);
 
-        calc.output_color = String::from("yellow");
-        assert_eq!(String::from("Some shiny output").yellow(), calc.get_answer());
+    //     calc.output = String::from("Some shiny output");
+    //     assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
 
-        calc.output_color = String::from("red");
-        assert_eq!(String::from("Some shiny output").red(), calc.get_answer());
+    //     calc.output_color = String::from("black");
+    //     assert_eq!(String::from("Some shiny output").black(), calc.get_answer());
 
-        calc.output_color = String::from("blue");
-        assert_eq!(String::from("Some shiny output").blue(), calc.get_answer());
+    //     calc.output_color = String::from("green");
+    //     assert_eq!(String::from("Some shiny output").green(), calc.get_answer());
 
-        calc.output_color = String::from("magenta");
-        assert_eq!(String::from("Some shiny output").magenta(), calc.get_answer());
+    //     calc.output_color = String::from("yellow");
+    //     assert_eq!(String::from("Some shiny output").yellow(), calc.get_answer());
 
-        calc.output_color = String::from("cyan");
-        assert_eq!(String::from("Some shiny output").cyan(), calc.get_answer());
+    //     calc.output_color = String::from("red");
+    //     assert_eq!(String::from("Some shiny output").red(), calc.get_answer());
 
-        calc.output_color = String::from("bright white");
-        assert_eq!(String::from("Some shiny output").bright_white(), calc.get_answer());
+    //     calc.output_color = String::from("blue");
+    //     assert_eq!(String::from("Some shiny output").blue(), calc.get_answer());
 
-        calc.output_color = String::from("bright black");
-        assert_eq!(String::from("Some shiny output").bright_black(), calc.get_answer());
+    //     calc.output_color = String::from("magenta");
+    //     assert_eq!(String::from("Some shiny output").magenta(), calc.get_answer());
 
-        calc.output_color = String::from("bright green");
-        assert_eq!(String::from("Some shiny output").bright_green(), calc.get_answer());
+    //     calc.output_color = String::from("cyan");
+    //     assert_eq!(String::from("Some shiny output").cyan(), calc.get_answer());
 
-        calc.output_color = String::from("bright yellow");
-        assert_eq!(String::from("Some shiny output").bright_yellow(), calc.get_answer());
+    //     calc.output_color = String::from("bright white");
+    //     assert_eq!(String::from("Some shiny output").bright_white(), calc.get_answer());
 
-        calc.output_color = String::from("bright red");
-        assert_eq!(String::from("Some shiny output").bright_red(), calc.get_answer());
+    //     calc.output_color = String::from("bright black");
+    //     assert_eq!(String::from("Some shiny output").bright_black(), calc.get_answer());
 
-        calc.output_color = String::from("bright blue");
-        assert_eq!(String::from("Some shiny output").bright_blue(), calc.get_answer());
+    //     calc.output_color = String::from("bright green");
+    //     assert_eq!(String::from("Some shiny output").bright_green(), calc.get_answer());
 
-        calc.output_color = String::from("bright magenta");
-        assert_eq!(String::from("Some shiny output").bright_magenta(), calc.get_answer());
+    //     calc.output_color = String::from("bright yellow");
+    //     assert_eq!(String::from("Some shiny output").bright_yellow(), calc.get_answer());
 
-        calc.output_color = String::from("bright cyan");
-        assert_eq!(String::from("Some shiny output").bright_cyan(), calc.get_answer());
-    }
+    //     calc.output_color = String::from("bright red");
+    //     assert_eq!(String::from("Some shiny output").bright_red(), calc.get_answer());
 
-    #[test]
-    fn get_answer_with_incorrect_color() {
-        use colored::Colorize;
+    //     calc.output_color = String::from("bright blue");
+    //     assert_eq!(String::from("Some shiny output").bright_blue(), calc.get_answer());
 
-        let mut calc = super::Calc::new();
-        assert_eq!(String::from("white"), calc.output_color);
+    //     calc.output_color = String::from("bright magenta");
+    //     assert_eq!(String::from("Some shiny output").bright_magenta(), calc.get_answer());
 
-        calc.output = String::from("Some shiny output");
-        assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
+    //     calc.output_color = String::from("bright cyan");
+    //     assert_eq!(String::from("Some shiny output").bright_cyan(), calc.get_answer());
+    // }
 
-        calc.output_color = String::from("incorrect color");
-        assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
-    }
+    // #[test]
+    // fn get_answer_with_incorrect_color() {
+    //     use colored::Colorize;
+
+    //     let mut calc = super::Calc::new();
+    //     assert_eq!(String::from("white"), calc.output_color);
+
+    //     calc.output = String::from("Some shiny output");
+    //     assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
+
+    //     calc.output_color = String::from("incorrect color");
+    //     assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
+    // }
 }
