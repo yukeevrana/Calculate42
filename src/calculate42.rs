@@ -1,37 +1,54 @@
 // use colored::Colorize;
 use regex;
+use std::collections::HashMap;
 
 pub struct Calc {
-    // output_color: String,
-    input: String,
-    // commands: Vec<String>,
-    output: String
+    // // output_color: String,
+    // input: String,
+    // // commands: Vec<String>,
+    // output: String,
+    priorities: HashMap<Oper, u8>
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+enum Oper {
+    Operand(u32),
+    Add,
+    Sub,
+    Multiply,
+    Divide
 }
 
 impl Calc {
     pub fn new() -> Self {
         Calc {
-            // output_color: String::from("white"),
-            input: String::new(),
-            // commands: Vec::new(),
-            output: String::new()
+            // // output_color: String::from("white"),
+            // input: String::new(),
+            // // commands: Vec::new(),
+            // output: String::new(),
+            priorities: HashMap::from([
+                (Oper::Add, 1),
+                (Oper::Sub, 1),
+                (Oper::Multiply, 2),
+                (Oper::Divide, 2)
+            ])
         }
     }
 
-    pub fn take_message(&mut self, message: String) -> Result<String, &str> {
-        self.input = message.clone();
+    // pub fn take_message(&mut self, message: String) -> Result<String, &str> {
+    //     self.input = message.clone();
 
-        if self.input.as_str() == "exit" { return Err("exit"); }
+    //     if self.input.as_str() == "exit" { return Err("exit"); }
         
-        // self.find_color_command();
+    //     // self.find_color_command();
 
-        match self.find_math_expr() {
-            Err(_) => {},
-            Ok(_) => {}
-        };
-        Err("")
-        // Ok(self.get_answer())
-    }
+    //     match self.find_math_expr() {
+    //         Err(_) => {},
+    //         Ok(_) => {}
+    //     };
+    //     Err("")
+    //     // Ok(self.get_answer())
+    // }
 
     fn is_math_expr(message: &String) -> bool {
         let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)]+$").unwrap();
@@ -39,148 +56,59 @@ impl Calc {
         re.is_match(message.as_str())
     }
 
-    fn try_convert(math_expr: &String) -> Option<Vec<String>> {
+    fn convert(&self, math_expr: &String) -> Vec<Oper> {
         // let mut res = String::new();
-        let mut res = Vec::new();
+        let mut res: Vec<Oper> = Vec::new();
+        let mut tmp: Vec<Oper> = Vec::new();
         let mut operand = String::new();
 
-        for ch in math_expr.chars() {
+        for ch in math_expr.replace(" ", "").chars() {
             match ch {
+                operation if operation == '+' || operation == '-' || operation == '*' || operation == '/' => {
+                    if operand != "" {
+                        res.push(Oper::Operand(operand.parse().unwrap()));
+                        operand.clear();
+                    } 
+
+                    let oper = match operation {
+                        '+' => Oper::Add,
+                        '-' => Oper::Sub,
+                        '*' => Oper::Multiply,
+                        _ => Oper::Divide
+                    };
+
+                    loop {
+                        match tmp.last() {
+                            Some(value) if self.priorities.get(value).unwrap() >= self.priorities.get(&oper).unwrap() => {
+                                res.push(tmp.pop().unwrap());
+                            }
+                            _ => { break; }
+                        }
+                    }
+                    tmp.push(oper);
+                }
                 number => {
                     let n = ch.to_digit(10);
                     match n {
-                        None => return None,
+                        None => {},
                         _ => { 
                             operand.push(number); 
                         }
                     }
                 }
-        //         // "(" => st.push(grapheme),
-        //         // ")" => {
-        //         //     while st.last() != Some(&"(") {
-        //         //         res.push(st.pop().unwrap());
-        //         //     } 
-        //         //     st.pop();
-        //         // },
-        //         '+' => {
-        //             if st.last() == Some(&'+') {
-        //                 res.push(st.pop().unwrap());
-        //             }
-        //             st.push(ch);
-        //         }
-        //         number => {
-        //             let n = ch.to_digit(10);
-        //             match n {
-        //                 None => { return Err("Parsing error"); },
-        //                 _ => { res.push(number); }
-        //             }
-        //         }
             }
         }
         
-        res.push(operand);
-
-        Some(res)
-
-        // for ch in st.iter().rev() {
-        //     res.push(*ch);
-        // }
-
-        // self.input = res;
-
-        // Ok(String::from(""))
-    }
-
-    // fn split_input(&mut self) {
-    //     let re = regex::Regex::new(r"[0-9\-\(\)\+\*/]+").unwrap();
-
-    //     for splitted in self.input.split_whitespace() {
-    //         if re.is_match(splitted) {
-    //             match self.commands.last() {
-    //                 Some(w) if re.is_match(w) => { 
-    //                     let new_expr = String::from(format!("{w}{splitted}"));
-    //                     self.commands.pop();
-    //                     self.commands.push(new_expr);
-    //                 },
-    //                 _ => { self.commands.push(String::from(splitted)) }
-    //             }
-    //         } else {
-    //             self.commands.push(String::from(splitted))
-    //         }
-    //     }
-    // }
-
-    // fn find_color_command(&mut self) {
-    //     let color = self.input.as_str();
-    //     if color == "black" || color == "red" || color == "green" || color == "yellow" || color == "blue" || 
-    //         color == "magenta" || color == "cyan" || color == "white" || color == "bright black" || 
-    //         color == "bright red" || color == "bright green" || color == "bright yellow" || color == "bright blue" || 
-    //         color == "bright magenta" || color == "bright cyan" || color == "bright white" {
-
-    //         self.output_color = String::from(color);
-    //         self.output = String::from("Done");
-    //         self.input.clear();
-    //     }
-    // }
-
-    fn find_math_expr(&mut self) -> Result<String, &str> {
-        let mut res = String::new();
-        let mut st = Vec::new();
-
-        for ch in self.input.chars() {
-            match ch {
-                // "(" => st.push(grapheme),
-                // ")" => {
-                //     while st.last() != Some(&"(") {
-                //         res.push(st.pop().unwrap());
-                //     } 
-                //     st.pop();
-                // },
-                '+' => {
-                    if st.last() == Some(&'+') {
-                        res.push(st.pop().unwrap());
-                    }
-                    st.push(ch);
-                }
-                number => {
-                    let n = ch.to_digit(10);
-                    match n {
-                        None => { return Err("Parsing error"); },
-                        _ => { res.push(number); }
-                    }
-                }
-            }
+        if operand != "" {
+            res.push(Oper::Operand(operand.parse().unwrap()));
+        }
+        tmp.reverse();
+        for oper in tmp {
+            res.push(oper);
         }
 
-        for ch in st.iter().rev() {
-            res.push(*ch);
-        }
-
-        self.input = res;
-
-        Ok(String::from(""))
+        res
     }
-
-    // fn get_answer(&self) -> colored::ColoredString {
-    //     match self.output_color.as_str() {
-    //         "blue"              => self.output.blue(),
-    //         "green"             => self.output.green(),
-    //         "red"               => self.output.red(),
-    //         "black"             => self.output.black(), 
-    //         "yellow"            => self.output.yellow(), 
-    //         "magenta"           => self.output.magenta(), 
-    //         "cyan"              => self.output.cyan(), 
-    //         "bright black"      => self.output.bright_black(), 
-    //         "bright red"        => self.output.bright_red(),
-    //         "bright green"      => self.output.bright_green(), 
-    //         "bright yellow"     => self.output.bright_yellow(), 
-    //         "bright blue"       => self.output.bright_blue(), 
-    //         "bright magenta"    => self.output.bright_magenta(),
-    //         "bright cyan"       => self.output.bright_cyan(), 
-    //         "bright white"      => self.output.bright_white(),
-    //         _                   => self.output.white()
-    //     }
-    // }
 }
 
 #[cfg(test)]
@@ -213,200 +141,224 @@ mod tests {
     }
 
     #[test]
-    fn try_convert_numbers() {
+    fn convert_numbers() {
         use super::*;
 
-        let mut res = Vec::new();
-        res.push(String::from("2387"));
-        assert_eq!(Calc::try_convert(&String::from("2387")), Some(res))
+        let calc = Calc::new();
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        assert_eq!(calc.convert(&String::from("2387")), res)
     }
 
-    // #[test]
-    // fn split_input_one_word() {
-    //     let mut calc = super::Calc::new();
-    //     assert_eq!(Vec::<String>::new(), calc.commands);
+    #[test]
+    fn convert_numbers_with_whitespaces() {
+        use super::*;
 
-    //     calc.input = String::from("word");
-    //     calc.split_input();
+        let calc = Calc::new();
 
-    //     let mut res = Vec::new();
-    //     res.push("word");
-    //     assert_eq!(res, calc.commands);
-    //     assert_eq!(String::from("word"), calc.input);
-    // }
-    
-    // #[test]
-    // fn split_input_words() {
-    //     let mut calc = super::Calc::new();
-    //     assert_eq!(Vec::<String>::new(), calc.commands);
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        assert_eq!(calc.convert(&String::from("2 3 87")), res)
+    }
 
-    //     calc.input = String::from("word and another word");
-    //     calc.split_input();
+    #[test]
+    fn convert_numbers_with_plus_correct() {
+        use super::*;
 
-    //     let mut res = Vec::new();
-    //     res.push("word");
-    //     res.push("and");
-    //     res.push("another");
-    //     res.push("word");
-    //     assert_eq!(res, calc.commands);
-    //     assert_eq!(String::from("word and another word"), calc.input);
-    // }
+        let calc = Calc::new();
 
-    // #[test]
-    // fn split_input_one_expr_without_whitespaces() {
-    //     let mut calc = super::Calc::new();
-    //     assert_eq!(Vec::<String>::new(), calc.commands);
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 + 49 5")), res)
+    }
 
-    //     calc.input = String::from("2+2*(2-2)/2");
-    //     calc.split_input();
+    #[test]
+    fn convert_numbers_with_plus_two_operations_in_a_row() {
+        use super::*;
 
-    //     let mut res = Vec::new();
-    //     res.push("2+2*(2-2)/2");
-    //     assert_eq!(res, calc.commands);
-    //     assert_eq!(String::from("2+2*(2-2)/2"), calc.input);
-    // }
+        let calc = Calc::new();
 
-    // #[test]
-    // fn split_input_one_expr_with_whitespaces() {
-    //     let mut calc = super::Calc::new();
-    //     assert_eq!(Vec::<String>::new(), calc.commands);
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Add);
+        res.push(Oper::Operand(495));
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 ++ 49 5")), res)
+    }
 
-    //     calc.input = String::from("2 + 2 * (2 - 2) / 2");
-    //     calc.split_input();
+    #[test]
+    fn convert_numbers_with_plus_extra_operation() {
+        use super::*;
 
-    //     let mut res = Vec::new();
-    //     res.push("2+2*(2-2)/2");
-    //     assert_eq!(res, calc.commands);
-    //     assert_eq!(String::from("2 + 2 * (2 - 2) / 2"), calc.input);
-    // }
+        let calc = Calc::new();
 
-    // #[test]
-    // fn split_input_words_and_expres() {
-    //     let mut calc = super::Calc::new();
-    //     assert_eq!(Vec::<String>::new(), calc.commands);
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Add);
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 + 49 5+")), res)
+    }
 
-    //     calc.input = String::from("word and another 2 + 2 * word (2-2)/2 another 2 * 4");
-    //     calc.split_input();
+    #[test]
+    fn convert_numbers_with_two_pluses_correct() {
+        use super::*;
 
-    //     let mut res = Vec::new();
-    //     res.push("word");
-    //     res.push("and");
-    //     res.push("another");
-    //     res.push("2+2*");
-    //     res.push("word");
-    //     res.push("(2-2)/2");
-    //     res.push("another");
-    //     res.push("2*4");
-    //     assert_eq!(res, calc.commands);
-    //     assert_eq!(String::from("word and another 2 + 2 * word (2-2)/2 another 2 * 4"), calc.input);
-    // }
+        let calc = Calc::new();
 
-    // #[test]
-    // fn find_color_command_only_correct_color() {
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Add);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 + 49 5+ 43 0 21")), res)
+    }
 
-    //     for color in [ "black", "red", "green", "yellow", "blue",
-    //                 "magenta", "cyan", "white", "bright black", "bright red",
-    //                 "bright green", "bright yellow", "bright blue", "bright magenta",
-    //                 "bright cyan", "bright white" ] {
+    #[test]
+    fn convert_numbers_with_minus_correct() {
+        use super::*;
 
-    //         let mut calc = super::Calc::new();
-    //         assert_eq!(String::from("white"), calc.output_color);
+        let calc = Calc::new();
 
-    //         let mut expected = Vec::new();
-    //         expected.push(String::from(color));
-    //         calc.commands = expected;
-    //         calc.find_color_command();
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Sub);
+        assert_eq!(calc.convert(&String::from("2 3 87 - 49 5")), res)
+    }
 
-    //         assert_eq!(String::from(color), calc.output_color);
-    //         assert_eq!(String::from("Done"), calc.output);
-    //         assert_eq!(String::from(""), calc.input);
-    //     }
-    // }
+    #[test]
+    fn convert_numbers_with_plus_and_minus_correct() {
+        use super::*;
 
-    // #[test]
-    // fn find_color_command_only_incorrect_color() {
+        let calc = Calc::new();
 
-    //     for color in [ "not a color at all", "rose", "purple", "exit", "another command" ] {
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Add);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Sub);
+        assert_eq!(calc.convert(&String::from("2 3 87 + 49 5- 43 0 21")), res)
+    }
 
-    //         let mut calc = super::Calc::new();
-    //         assert_eq!(String::from("white"), calc.output_color);
+    #[test]
+    fn convert_numbers_with_minus_and_plus_correct() {
+        use super::*;
 
-    //         calc.input = String::from(color);
-    //         calc.find_color_command();
+        let calc = Calc::new();
 
-    //         assert_eq!(String::from("white"), calc.output_color);
-    //         assert_eq!(String::new(), calc.output);
-    //         assert_eq!(String::from(color), calc.input);
-    //     }
-    // }
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Sub);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 - 49 5+ 43 0 21")), res)
+    }
 
-    // #[test]
-    // fn get_answer_with_correct_color() {
-    //     use colored::Colorize;
+    #[test]
+    fn convert_numbers_with_multiply_correct() {
+        use super::*;
 
-    //     let mut calc = super::Calc::new();
-    //     assert_eq!(String::from("white"), calc.output_color);
+        let calc = Calc::new();
 
-    //     calc.output = String::from("Some shiny output");
-    //     assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Multiply);
+        assert_eq!(calc.convert(&String::from("2 3 87 * 49 5")), res)
+    }
 
-    //     calc.output_color = String::from("black");
-    //     assert_eq!(String::from("Some shiny output").black(), calc.get_answer());
+    #[test]
+    fn convert_numbers_with_plus_and_multiply_correct() {
+        use super::*;
 
-    //     calc.output_color = String::from("green");
-    //     assert_eq!(String::from("Some shiny output").green(), calc.get_answer());
+        let calc = Calc::new();
 
-    //     calc.output_color = String::from("yellow");
-    //     assert_eq!(String::from("Some shiny output").yellow(), calc.get_answer());
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Multiply);
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 + 49 5* 43 0 21")), res)
+    }
 
-    //     calc.output_color = String::from("red");
-    //     assert_eq!(String::from("Some shiny output").red(), calc.get_answer());
+    #[test]
+    fn convert_numbers_with_multiply_and_plus_correct() {
+        use super::*;
 
-    //     calc.output_color = String::from("blue");
-    //     assert_eq!(String::from("Some shiny output").blue(), calc.get_answer());
+        let calc = Calc::new();
 
-    //     calc.output_color = String::from("magenta");
-    //     assert_eq!(String::from("Some shiny output").magenta(), calc.get_answer());
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Multiply);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 * 49 5+ 43 0 21")), res)
+    }
 
-    //     calc.output_color = String::from("cyan");
-    //     assert_eq!(String::from("Some shiny output").cyan(), calc.get_answer());
+    #[test]
+    fn convert_numbers_with_divide_correct() {
+        use super::*;
 
-    //     calc.output_color = String::from("bright white");
-    //     assert_eq!(String::from("Some shiny output").bright_white(), calc.get_answer());
+        let calc = Calc::new();
 
-    //     calc.output_color = String::from("bright black");
-    //     assert_eq!(String::from("Some shiny output").bright_black(), calc.get_answer());
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Divide);
+        assert_eq!(calc.convert(&String::from("2 3 87 / 49 5")), res)
+    }
 
-    //     calc.output_color = String::from("bright green");
-    //     assert_eq!(String::from("Some shiny output").bright_green(), calc.get_answer());
+    #[test]
+    fn convert_numbers_with_divide_and_multiply_correct() {
+        use super::*;
 
-    //     calc.output_color = String::from("bright yellow");
-    //     assert_eq!(String::from("Some shiny output").bright_yellow(), calc.get_answer());
+        let calc = Calc::new();
 
-    //     calc.output_color = String::from("bright red");
-    //     assert_eq!(String::from("Some shiny output").bright_red(), calc.get_answer());
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Divide);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Multiply);
+        assert_eq!(calc.convert(&String::from("2 3 87 / 49 5* 43 0 21")), res)
+    }
 
-    //     calc.output_color = String::from("bright blue");
-    //     assert_eq!(String::from("Some shiny output").bright_blue(), calc.get_answer());
+    #[test]
+    fn convert_numbers_with_plus_and_divide_correct() {
+        use super::*;
 
-    //     calc.output_color = String::from("bright magenta");
-    //     assert_eq!(String::from("Some shiny output").bright_magenta(), calc.get_answer());
+        let calc = Calc::new();
 
-    //     calc.output_color = String::from("bright cyan");
-    //     assert_eq!(String::from("Some shiny output").bright_cyan(), calc.get_answer());
-    // }
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Divide);
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 + 49 5/ 43 0 21")), res)
+    }
 
-    // #[test]
-    // fn get_answer_with_incorrect_color() {
-    //     use colored::Colorize;
+    #[test]
+    fn convert_numbers_with_divide_and_plus_correct() {
+        use super::*;
 
-    //     let mut calc = super::Calc::new();
-    //     assert_eq!(String::from("white"), calc.output_color);
+        let calc = Calc::new();
 
-    //     calc.output = String::from("Some shiny output");
-    //     assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
-
-    //     calc.output_color = String::from("incorrect color");
-    //     assert_eq!(String::from("Some shiny output").white(), calc.get_answer());
-    // }
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Divide);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Add);
+        assert_eq!(calc.convert(&String::from("2 3 87 / 49 5+ 43 0 21")), res)
+    }
 }
