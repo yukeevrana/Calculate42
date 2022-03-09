@@ -1,54 +1,32 @@
-// use colored::Colorize;
 use regex;
-use std::collections::HashMap;
 
-pub struct Calc {
-    // // output_color: String,
-    // input: String,
-    // // commands: Vec<String>,
-    // output: String,
-    priorities: HashMap<Oper, u8>
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum Oper {
-    Operand(u32),
     Add,
     Sub,
     Multiply,
-    Divide
+    Divide,
+    Operand(u32)
 }
+
+impl Oper {
+    fn get_priority(&self) -> u8 {
+        match self {
+            Oper::Add => 1,
+            Oper::Sub => 1,
+            Oper::Multiply => 2,
+            Oper::Divide => 2,
+            _ => 0
+        }
+    }
+}
+
+pub struct Calc {}
 
 impl Calc {
     pub fn new() -> Self {
-        Calc {
-            // // output_color: String::from("white"),
-            // input: String::new(),
-            // // commands: Vec::new(),
-            // output: String::new(),
-            priorities: HashMap::from([
-                (Oper::Add, 1),
-                (Oper::Sub, 1),
-                (Oper::Multiply, 2),
-                (Oper::Divide, 2)
-            ])
-        }
+        Calc {}
     }
-
-    // pub fn take_message(&mut self, message: String) -> Result<String, &str> {
-    //     self.input = message.clone();
-
-    //     if self.input.as_str() == "exit" { return Err("exit"); }
-        
-    //     // self.find_color_command();
-
-    //     match self.find_math_expr() {
-    //         Err(_) => {},
-    //         Ok(_) => {}
-    //     };
-    //     Err("")
-    //     // Ok(self.get_answer())
-    // }
 
     fn is_math_expr(message: &String) -> bool {
         let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)]+$").unwrap();
@@ -57,38 +35,37 @@ impl Calc {
     }
 
     fn convert(&self, math_expr: &String) -> Vec<Oper> {
-        // let mut res = String::new();
-        let mut res: Vec<Oper> = Vec::new();
-        let mut tmp: Vec<Oper> = Vec::new();
+        let mut result: Vec<Oper> = Vec::new();
+        let mut temp: Vec<Oper> = Vec::new();
         let mut operand = String::new();
 
-        for ch in math_expr.replace(" ", "").chars() {
-            match ch {
-                operation if operation == '+' || operation == '-' || operation == '*' || operation == '/' => {
+        for current_ch in math_expr.replace(" ", "").chars() {
+            match current_ch {
+                operation_symbol if operation_symbol == '+' || operation_symbol == '-' || operation_symbol == '*' || operation_symbol == '/' => {
                     if operand != "" {
-                        res.push(Oper::Operand(operand.parse().unwrap()));
+                        result.push(Oper::Operand(operand.parse().unwrap()));
                         operand.clear();
                     } 
 
-                    let oper = match operation {
+                    let current_operation = match operation_symbol {
                         '+' => Oper::Add,
                         '-' => Oper::Sub,
                         '*' => Oper::Multiply,
                         _ => Oper::Divide
                     };
-
+                    
                     loop {
-                        match tmp.last() {
-                            Some(value) if self.priorities.get(value).unwrap() >= self.priorities.get(&oper).unwrap() => {
-                                res.push(tmp.pop().unwrap());
+                        match temp.last() {
+                            Some(last_operation) if last_operation.get_priority() >= current_operation.get_priority() => {
+                                result.push(temp.pop().unwrap());
                             }
                             _ => { break; }
                         }
                     }
-                    tmp.push(oper);
+                    temp.push(current_operation);
                 }
                 number => {
-                    let n = ch.to_digit(10);
+                    let n = current_ch.to_digit(10);
                     match n {
                         None => {},
                         _ => { 
@@ -100,14 +77,14 @@ impl Calc {
         }
         
         if operand != "" {
-            res.push(Oper::Operand(operand.parse().unwrap()));
+            result.push(Oper::Operand(operand.parse().unwrap()));
         }
-        tmp.reverse();
-        for oper in tmp {
-            res.push(oper);
+        temp.reverse();
+        for oper in temp {
+            result.push(oper);
         }
 
-        res
+        result
     }
 }
 
