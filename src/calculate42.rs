@@ -28,12 +28,15 @@ impl Calc {
         Calc {}
     }
 
+    /// Checks if string is a valid math expression 
     fn is_math_expr(message: &String) -> bool {
-        let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)]+$").unwrap();
+        let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)]+$").unwrap(); // Numbers, whitespaces, +, -, *, /, %, (, )
 
         re.is_match(message.as_str())
     }
 
+    /// Converts a string with a *valid* (but not necessarily correct) math expression 
+    /// to a stack with an expression in RPN. Tests will show in detail.
     fn convert(&self, math_expr: &String) -> Vec<Oper> {
         let mut result: Vec<Oper> = Vec::new();
         let mut temp: Vec<Oper> = Vec::new();
@@ -42,8 +45,9 @@ impl Calc {
         for current_ch in math_expr.replace(" ", "").chars() {
             match current_ch {
                 operation_symbol if operation_symbol == '+' || operation_symbol == '-' || operation_symbol == '*' || operation_symbol == '/' => {
+                    // If found an operation symbol, the previous number has ended, so we will add it to result
                     if operand != "" {
-                        result.push(Oper::Operand(operand.parse().unwrap()));
+                        result.push(Oper::Operand(operand.parse().unwrap())); // We check it below when filling
                         operand.clear();
                     } 
 
@@ -51,13 +55,13 @@ impl Calc {
                         '+' => Oper::Add,
                         '-' => Oper::Sub,
                         '*' => Oper::Multiply,
-                        _ => Oper::Divide
+                        _ => Oper::Divide // We don't need to check, the main check in the 'if' above
                     };
-                    
+
                     loop {
                         match temp.last() {
                             Some(last_operation) if last_operation.get_priority() >= current_operation.get_priority() => {
-                                result.push(temp.pop().unwrap());
+                                result.push(temp.pop().unwrap()); // The last element is definitely exists
                             }
                             _ => { break; }
                         }
@@ -65,20 +69,17 @@ impl Calc {
                     temp.push(current_operation);
                 }
                 number => {
-                    let n = current_ch.to_digit(10);
-                    match n {
-                        None => {},
-                        _ => { 
-                            operand.push(number); 
-                        }
-                    }
+                    operand.push(number); // If a char is not an operation symbol, it is a number, this fn doesn't check
                 }
             }
         }
         
+        // Don't forget the last number
         if operand != "" {
-            result.push(Oper::Operand(operand.parse().unwrap()));
+            result.push(Oper::Operand(operand.parse().unwrap())); // We don't check
         }
+
+        // Don't forget operations on the stack
         temp.reverse();
         for oper in temp {
             result.push(oper);
