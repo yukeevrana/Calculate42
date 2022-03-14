@@ -1,7 +1,7 @@
 use regex;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-enum Oper {
+pub enum Oper {
     Add,
     Sub,
     Mult,
@@ -27,15 +27,15 @@ impl Oper {
 }
 
 /// Checks if string is a valid math expression 
-fn is_math_expr(message: &String) -> bool {
-    let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)]+$").unwrap(); // Numbers, whitespaces, +, -, *, /, %, (, )
+pub fn is_math_expr(message: &String) -> bool {
+    let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)\^]+$").unwrap(); // Numbers, whitespaces, +, -, *, /, %, (, )
 
     re.is_match(message.as_str())
 }
 
 /// Converts a string with a *valid* (but not necessarily correct) math expression 
 /// to a stack with an expression in RPN. Tests will show in detail.
-fn convert(math_expr: &String) -> Vec<Oper> {
+pub fn convert(math_expr: &String) -> Vec<Oper> {
     let mut result: Vec<Oper> = Vec::new();
     let mut temp: Vec<Oper> = Vec::new();
     let mut operand = String::new();
@@ -64,7 +64,8 @@ fn convert(math_expr: &String) -> Vec<Oper> {
                 loop {
                     match temp.last() {
                         Some(last_operation) if last_operation.get_priority() >= current_operation.get_priority() => {
-                            result.push(temp.pop().unwrap()); // The last element is definitely exists
+                            result.push(*last_operation);
+                            temp.pop();
                         }
                         _ => { break; }
                     }
@@ -91,7 +92,7 @@ fn convert(math_expr: &String) -> Vec<Oper> {
     result
 }
 
-fn calculate(rpn_expr: &Vec<Oper>) -> Option<i32> {
+pub fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<i32> {
     let mut new_rpn_expr: Vec<Oper> = Vec::new();
     let mut counter: u32 = 0;
     let mut left: Option<i32> = None;
@@ -170,7 +171,7 @@ fn calculate(rpn_expr: &Vec<Oper>) -> Option<i32> {
     }
 
     if counter > 1 {
-        return calculate(&new_rpn_expr);
+        return recursive_calculate(&new_rpn_expr);
     } 
     else {
         let result = new_rpn_expr.pop();
@@ -199,7 +200,7 @@ mod tests {
     fn is_math_expr_looks_like_math_expr_without_whitespaces() {
         use super::*;
 
-        for message in ["2+2", "3*3", "4/4", "5-5", "1**1", "6//6", "7%7", ")8(8"] {
+        for message in ["2+2", "3*3", "4/4", "5-5", "1**1", "6//6", "7%7", ")8(8", "9^9"] {
             assert!(is_math_expr(&String::from(message)));
         }
     }
@@ -208,7 +209,7 @@ mod tests {
     fn is_math_expr_looks_like_math_expr_with_whitespaces() {
         use super::*;
 
-        for message in ["2 + 2", "3 * 3", "4 /4", "5- 5", "1* *1", "6    //6", "7%   7", ") 8(    8"] {
+        for message in ["2 + 2", "3 * 3", "4 /4", "5- 5", "1* *1", "6    //6", "7%   7", ") 8(    8", "9^ 9"] {
             assert!(is_math_expr(&String::from(message)));
         }
     }
@@ -544,13 +545,13 @@ mod tests {
     // ****************************************************************************************************
     //
     //
-    //calculate tests *************************************************************************************
+    //recursive_calculate tests *************************************************************************************
     #[test]
     fn calculate_empty_expr() {
         use super::*;
         
         let rpn: Vec<Oper> = Vec::new();
-        assert_eq!(calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), None);
     }
 
     #[test]
@@ -559,7 +560,7 @@ mod tests {
         
         let mut rpn: Vec<Oper> = Vec::new();
         rpn.push(Oper::Operand(189));
-        assert_eq!(calculate(&rpn), Some(189));
+        assert_eq!(recursive_calculate(&rpn), Some(189));
     }
 
     #[test]
@@ -569,7 +570,7 @@ mod tests {
         let mut rpn: Vec<Oper> = Vec::new();
         rpn.push(Oper::Operand(189));
         rpn.push(Oper::Operand(530));
-        assert_eq!(calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), None);
     }
 
     #[test]
@@ -580,7 +581,7 @@ mod tests {
         rpn.push(Oper::Operand(189));
         rpn.push(Oper::Operand(530));
         rpn.push(Oper::Add);
-        assert_eq!(calculate(&rpn), Some(719));
+        assert_eq!(recursive_calculate(&rpn), Some(719));
     }
 
     #[test]
@@ -590,7 +591,7 @@ mod tests {
         let mut rpn: Vec<Oper> = Vec::new();
         rpn.push(Oper::Operand(189));
         rpn.push(Oper::Add);
-        assert_eq!(calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), None);
     }
 
     #[test]
@@ -602,7 +603,7 @@ mod tests {
         rpn.push(Oper::Operand(530));
         rpn.push(Oper::Operand(325));
         rpn.push(Oper::Add);
-        assert_eq!(calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), None);
     }
 
     #[test]
@@ -614,7 +615,7 @@ mod tests {
         rpn.push(Oper::Operand(530));
         rpn.push(Oper::Add);
         rpn.push(Oper::Add);
-        assert_eq!(calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), None);
     }
 
     #[test]
@@ -627,7 +628,7 @@ mod tests {
         rpn.push(Oper::Operand(325));
         rpn.push(Oper::Add);
         rpn.push(Oper::Add);
-        assert_eq!(calculate(&rpn), Some(1044));
+        assert_eq!(recursive_calculate(&rpn), Some(1044));
     }
 
     #[test]
@@ -638,7 +639,7 @@ mod tests {
         rpn.push(Oper::Operand(530));
         rpn.push(Oper::Operand(189));
         rpn.push(Oper::Sub);
-        assert_eq!(calculate(&rpn), Some(341));
+        assert_eq!(recursive_calculate(&rpn), Some(341));
     }
     
     #[test]
@@ -649,7 +650,7 @@ mod tests {
         rpn.push(Oper::Operand(189));
         rpn.push(Oper::Operand(530));
         rpn.push(Oper::Sub);
-        assert_eq!(calculate(&rpn), Some(-341));
+        assert_eq!(recursive_calculate(&rpn), Some(-341));
     }
 
     #[test]
@@ -662,7 +663,7 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Operand(325));
         rpn.push(Oper::Sub);
-        assert_eq!(calculate(&rpn), Some(394));
+        assert_eq!(recursive_calculate(&rpn), Some(394));
     }
 
     #[test]
@@ -675,6 +676,6 @@ mod tests {
         rpn.push(Oper::Operand(325));
         rpn.push(Oper::Add);
         rpn.push(Oper::Sub);
-        assert_eq!(calculate(&rpn), Some(-666));
+        assert_eq!(recursive_calculate(&rpn), Some(-666));
     }
 }
