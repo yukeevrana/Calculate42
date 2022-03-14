@@ -123,75 +123,34 @@ pub fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
                         }
                     }
                 },
-                Oper::Add => {
+                _ => {
+                    let left_number: f64;
                     match left {
-                        Some(l) => {
-                            match right {
-                                Some(r) => {
-                                    new_rpn_expr.push(Oper::Operand(l + r));
-                                    left = None;
-                                    right = None;
-                                    counter += 1;
-                                    was_operation = true;
-                                },
-                                None => return None
-                            }
-                        },
+                        Some(n) => left_number = n,
                         None => return None
                     }
-                },
-                Oper::Sub => {
-                    match left {
-                        Some(l) => {
-                            match right {
-                                Some(r) => {
-                                    new_rpn_expr.push(Oper::Operand(l - r));
-                                    left = None;
-                                    right = None;
-                                    counter += 1;
-                                    was_operation = true;
-                                },
-                                None => return None
-                            }
-                        },
+                    let right_number: f64;
+                    match right {
+                        Some(n) => right_number = n,
                         None => return None
                     }
-                },
-                Oper::Mult => {
-                    match left {
-                        Some(l) => {
-                            match right {
-                                Some(r) => {
-                                    new_rpn_expr.push(Oper::Operand(l * r));
-                                    left = None;
-                                    right = None;
-                                    counter += 1;
-                                    was_operation = true;
-                                },
-                                None => return None
-                            }
-                        },
-                        None => return None
-                    }
-                },
-                Oper::Div => {
-                    match left {
-                        Some(l) => {
-                            match right {
-                                Some(r) => {
-                                    new_rpn_expr.push(Oper::Operand(l / r));
-                                    left = None;
-                                    right = None;
-                                    counter += 1;
-                                    was_operation = true;
-                                },
-                                None => return None
-                            }
-                        },
-                        None => return None
-                    }
+
+                    left = None;
+                    right = None;
+                    counter += 1;
+                    was_operation = true;
+                    let result: f64;
+
+                    result = match oper {
+                        Oper::Add => left_number + right_number,
+                        Oper::Sub => left_number - right_number,
+                        Oper::Mult => left_number * right_number,
+                        Oper::Div => left_number / right_number,
+                        _ => return None
+                    };
+                    
+                    new_rpn_expr.push(Oper::Operand(result));
                 }
-                _ => return None
             }
         }
     }
