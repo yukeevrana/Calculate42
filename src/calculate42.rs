@@ -146,9 +146,10 @@ pub fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
                         Oper::Sub => left_number - right_number,
                         Oper::Mult => left_number * right_number,
                         Oper::Div => left_number / right_number,
+                        Oper::Rem => left_number % right_number,
                         _ => return None
                     };
-                    
+
                     new_rpn_expr.push(Oper::Operand(result));
                 }
             }
@@ -788,5 +789,75 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Div);
         assert_eq!(recursive_calculate(&rpn), Some(5.0));
+    }
+    
+    #[test]
+    fn calculate_rem_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(533.0));
+        rpn.push(Oper::Operand(106.0));
+        rpn.push(Oper::Rem);
+        assert_eq!(recursive_calculate(&rpn), Some(3.0));
+    }
+    
+    #[test]
+    fn calculate_rem_left_negative_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(-533.0));
+        rpn.push(Oper::Operand(106.0));
+        rpn.push(Oper::Rem);
+        assert_eq!(recursive_calculate(&rpn), Some(-3.0));
+    }
+        
+    #[test]
+    fn calculate_rem_right_negative_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(533.0));
+        rpn.push(Oper::Operand(-106.0));
+        rpn.push(Oper::Rem);
+        assert_eq!(recursive_calculate(&rpn), Some(3.0));
+    }
+
+    #[test]
+    fn calculate_rem_two_negative_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(-533.0));
+        rpn.push(Oper::Operand(-106.0));
+        rpn.push(Oper::Rem);
+        assert_eq!(recursive_calculate(&rpn), Some(-3.0));
+    }
+
+    #[test]
+    fn calculate_plus_and_rem_with_brackets_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(513.0));
+        rpn.push(Oper::Operand(20.0));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Operand(106.0));
+        rpn.push(Oper::Rem);
+        assert_eq!(recursive_calculate(&rpn), Some(3.0));
+    }
+
+    #[test]
+    fn calculate_plus_and_rem_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(533.0));
+        rpn.push(Oper::Operand(98.0));
+        rpn.push(Oper::Operand(8.0));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Rem);
+        assert_eq!(recursive_calculate(&rpn), Some(3.0));
     }
 }
