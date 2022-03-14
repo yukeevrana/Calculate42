@@ -4,9 +4,12 @@ use regex;
 enum Oper {
     Add,
     Sub,
-    Multiply,
-    Divide,
-    Operand(u32)
+    Mult,
+    Div,
+    Rem,
+    Exp,
+    // TODO: unary negation (right-associative) with priority like Exp
+    Operand(i32)
 }
 
 impl Oper {
@@ -14,8 +17,10 @@ impl Oper {
         match self {
             Oper::Add => 1,
             Oper::Sub => 1,
-            Oper::Multiply => 2,
-            Oper::Divide => 2,
+            Oper::Mult => 2,
+            Oper::Div => 2,
+            Oper::Rem => 2,
+            Oper::Exp => 3,
             _ => 0
         }
     }
@@ -37,7 +42,10 @@ fn convert(math_expr: &String) -> Vec<Oper> {
 
     for current_ch in math_expr.replace(" ", "").chars() {
         match current_ch {
-            operation_symbol if operation_symbol == '+' || operation_symbol == '-' || operation_symbol == '*' || operation_symbol == '/' => {
+            operation_symbol if 
+                operation_symbol == '+' || operation_symbol == '-' || operation_symbol == '*' || 
+                operation_symbol == '/' || operation_symbol == '%' || operation_symbol == '^' => {
+
                 // If found an operation symbol, the previous number has ended, so we will add it to result
                 if operand != "" {
                     result.push(Oper::Operand(operand.parse().unwrap())); // We check it below when filling
@@ -47,8 +55,10 @@ fn convert(math_expr: &String) -> Vec<Oper> {
                 let current_operation = match operation_symbol {
                     '+' => Oper::Add,
                     '-' => Oper::Sub,
-                    '*' => Oper::Multiply,
-                    _ => Oper::Divide // We don't need to check, the main check in the 'if' above
+                    '*' => Oper::Mult,
+                    '%' => Oper::Rem,
+                    '^' => Oper::Exp,
+                    _ => Oper::Div // We don't need to check, the main check in the 'if' above
                 };
 
                 loop {
@@ -81,8 +91,110 @@ fn convert(math_expr: &String) -> Vec<Oper> {
     result
 }
 
+fn calculate(rpn_expr: &Vec<Oper>) -> Option<i32> {
+    let mut new_rpn_expr: Vec<Oper> = Vec::new();
+    let mut counter: u32 = 0;
+    let mut left: Option<i32> = None;
+    let mut right: Option<i32> = None;
+    let mut was_operation: bool = false;
+
+    for oper in rpn_expr {
+
+        if was_operation {
+            new_rpn_expr.push(*oper);
+            counter += 1;
+        }
+        else {
+            match oper {
+                Oper::Operand(n) => {
+                    match left {
+                        None => left = Some(*n),
+                        Some(l) => {
+                            if right == None {
+                                right = Some(*n);
+                            }
+                            else {
+                                new_rpn_expr.push(Oper::Operand(l));
+                                counter += 1;
+                                left = right;
+                                right = Some(*n);
+                            }
+                        }
+                    }
+                },
+                Oper::Add => {
+                    match left {
+                        Some(l) => {
+                            match right {
+                                Some(r) => {
+                                    new_rpn_expr.push(Oper::Operand(l + r));
+                                    left = None;
+                                    right = None;
+                                    counter += 1;
+                                    was_operation = true;
+                                },
+                                None => return None
+                            }
+                        },
+                        None => return None
+                    }
+                },
+                Oper::Sub => {
+                    match left {
+                        Some(l) => {
+                            match right {
+                                Some(r) => {
+                                    new_rpn_expr.push(Oper::Operand(l - r));
+                                    left = None;
+                                    right = None;
+                                    counter += 1;
+                                    was_operation = true;
+                                },
+                                None => return None
+                            }
+                        },
+                        None => return None
+                    }
+                }
+                _ => return None
+            }
+        }
+    }
+    
+    match left {
+        Some(n) if right == None => { 
+            new_rpn_expr.push(Oper::Operand(n));
+            counter += 1;
+        }
+        _ => {}
+    }
+
+    if counter > 1 {
+        return calculate(&new_rpn_expr);
+    } 
+    else {
+        let result = new_rpn_expr.pop();
+        match result {
+            Some(operand) => {
+                match operand {
+                    Oper::Operand(number) => {
+                        return Some(number);
+                    },
+                    _ => return None
+                }
+            },
+            _ => return None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+
+    // ****************************************************************************************************
+    //
+    //
+    //is_math_expr tests **********************************************************************************
     #[test]
     fn is_math_expr_looks_like_math_expr_without_whitespaces() {
         use super::*;
@@ -110,6 +222,10 @@ mod tests {
         }
     }
 
+    // ****************************************************************************************************
+    //
+    //
+    //convert tests ***************************************************************************************
     #[test]
     fn convert_numbers() {
         use super::*;
@@ -214,88 +330,351 @@ mod tests {
     }
 
     #[test]
-    fn convert_numbers_with_multiply_correct() {
+    fn convert_numbers_with_mult_correct() {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387));
         res.push(Oper::Operand(495));
-        res.push(Oper::Multiply);
+        res.push(Oper::Mult);
         assert_eq!(convert(&String::from("2 3 87 * 49 5")), res)
     }
 
     #[test]
-    fn convert_numbers_with_plus_and_multiply_correct() {
+    fn convert_numbers_with_plus_and_mult_correct() {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387));
         res.push(Oper::Operand(495));
         res.push(Oper::Operand(43021));
-        res.push(Oper::Multiply);
+        res.push(Oper::Mult);
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5* 43 0 21")), res)
     }
 
     #[test]
-    fn convert_numbers_with_multiply_and_plus_correct() {
+    fn convert_numbers_with_mult_and_plus_correct() {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387));
         res.push(Oper::Operand(495));
-        res.push(Oper::Multiply);
+        res.push(Oper::Mult);
         res.push(Oper::Operand(43021));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 * 49 5+ 43 0 21")), res)
     }
 
     #[test]
-    fn convert_numbers_with_divide_correct() {
+    fn convert_numbers_with_div_correct() {
         use super::*;
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387));
         res.push(Oper::Operand(495));
-        res.push(Oper::Divide);
+        res.push(Oper::Div);
         assert_eq!(convert(&String::from("2 3 87 / 49 5")), res)
     }
 
     #[test]
-    fn convert_numbers_with_divide_and_multiply_correct() {
+    fn convert_numbers_with_div_and_mult_correct() {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387));
         res.push(Oper::Operand(495));
-        res.push(Oper::Divide);
+        res.push(Oper::Div);
         res.push(Oper::Operand(43021));
-        res.push(Oper::Multiply);
+        res.push(Oper::Mult);
         assert_eq!(convert(&String::from("2 3 87 / 49 5* 43 0 21")), res)
     }
 
     #[test]
-    fn convert_numbers_with_plus_and_divide_correct() {
+    fn convert_numbers_with_plus_and_div_correct() {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387));
         res.push(Oper::Operand(495));
         res.push(Oper::Operand(43021));
-        res.push(Oper::Divide);
+        res.push(Oper::Div);
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5/ 43 0 21")), res)
     }
 
     #[test]
-    fn convert_numbers_with_divide_and_plus_correct() {
+    fn convert_numbers_with_div_and_plus_correct() {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387));
         res.push(Oper::Operand(495));
-        res.push(Oper::Divide);
+        res.push(Oper::Div);
         res.push(Oper::Operand(43021));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 / 49 5+ 43 0 21")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_rem_correct() {
+        use super::*;
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Rem);
+        assert_eq!(convert(&String::from("2 3 87 % 49 5")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_rem_and_mult_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Rem);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Mult);
+        assert_eq!(convert(&String::from("2 3 87 % 49 5* 43 0 21")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_plus_and_rem_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Rem);
+        res.push(Oper::Add);
+        assert_eq!(convert(&String::from("2 3 87 + 49 5% 43 0 21")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_rem_and_plus_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Rem);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Add);
+        assert_eq!(convert(&String::from("2 3 87 % 49 5+ 43 0 21")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_exp_correct() {
+        use super::*;
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Exp);
+        assert_eq!(convert(&String::from("2 3 87 ^ 49 5")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_exp_and_mult_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Exp);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Mult);
+        assert_eq!(convert(&String::from("2 3 87 ^ 49 5* 43 0 21")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_mult_and_exp_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Exp);
+        res.push(Oper::Mult);
+        assert_eq!(convert(&String::from("2 3 87 * 49 5^ 43 0 21")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_plus_and_exp_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Exp);
+        res.push(Oper::Add);
+        assert_eq!(convert(&String::from("2 3 87 + 49 5^ 43 0 21")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_exp_and_plus_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Exp);
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Add);
+        assert_eq!(convert(&String::from("2 3 87 ^ 49 5+ 43 0 21")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_plus_and_mult_and_exp_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(1509));
+        res.push(Oper::Exp);
+        res.push(Oper::Mult);
+        res.push(Oper::Add);
+        assert_eq!(convert(&String::from("2 3 87 + 49 5* 43 0 21 ^15 09")), res)
+    }
+
+    // ****************************************************************************************************
+    //
+    //
+    //calculate tests *************************************************************************************
+    #[test]
+    fn calculate_empty_expr() {
+        use super::*;
+        
+        let rpn: Vec<Oper> = Vec::new();
+        assert_eq!(calculate(&rpn), None);
+    }
+
+    #[test]
+    fn calculate_operand() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        assert_eq!(calculate(&rpn), Some(189));
+    }
+
+    #[test]
+    fn calculate_operands() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        assert_eq!(calculate(&rpn), None);
+    }
+
+    #[test]
+    fn calculate_plus_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Add);
+        assert_eq!(calculate(&rpn), Some(719));
+    }
+
+    #[test]
+    fn calculate_plus_too_few_operands() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Add);
+        assert_eq!(calculate(&rpn), None);
+    }
+
+    #[test]
+    fn calculate_plus_too_many_operands() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Add);
+        assert_eq!(calculate(&rpn), None);
+    }
+
+    #[test]
+    fn calculate_plus_too_many_operations() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Add);
+        assert_eq!(calculate(&rpn), None);
+    }
+
+    #[test]
+    fn calculate_plus_and_plus_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Add);
+        assert_eq!(calculate(&rpn), Some(1044));
+    }
+
+    #[test]
+    fn calculate_minus_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Sub);
+        assert_eq!(calculate(&rpn), Some(341));
+    }
+    
+    #[test]
+    fn calculate_minus_negative_result_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Sub);
+        assert_eq!(calculate(&rpn), Some(-341));
+    }
+
+    #[test]
+    fn calculate_plus_and_minus_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Sub);
+        assert_eq!(calculate(&rpn), Some(394));
+    }
+
+    #[test]
+    fn calculate_plus_and_minus_with_brackets_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Sub);
+        assert_eq!(calculate(&rpn), Some(-666));
     }
 }
