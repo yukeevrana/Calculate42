@@ -8,6 +8,7 @@ pub enum Oper {
     Div,
     Rem,
     Exp,
+    Bracket,
     // TODO: unary negation (right-associative) with priority like Exp
     Operand(f64)
 }
@@ -44,7 +45,8 @@ pub fn convert(math_expr: &String) -> Vec<Oper> {
         match current_ch {
             operation_symbol if 
                 operation_symbol == '+' || operation_symbol == '-' || operation_symbol == '*' || 
-                operation_symbol == '/' || operation_symbol == '%' || operation_symbol == '^' => {
+                operation_symbol == '/' || operation_symbol == '%' || operation_symbol == '^' || 
+                operation_symbol == '(' => {
 
                 // If found an operation symbol, the previous number has ended, so we will add it to result
                 if operand != "" {
@@ -58,19 +60,44 @@ pub fn convert(math_expr: &String) -> Vec<Oper> {
                     '*' => Oper::Mult,
                     '%' => Oper::Rem,
                     '^' => Oper::Exp,
+                    '(' => Oper::Bracket,
                     _ => Oper::Div // We don't need to check, the main check in the 'if' above
                 };
 
+                if current_operation != Oper::Bracket {
+                    loop {
+                        match temp.last() {
+                            Some(last_operation) if last_operation.get_priority() >= current_operation.get_priority() => {
+                                result.push(*last_operation);
+                                temp.pop();
+                            }
+                            _ => { break; }
+                        }
+                    }
+                }
+
+                temp.push(current_operation);
+            },
+            ')' => {                
+                // If found a bracket, the previous number has ended, so we will add it to result
+                if operand != "" {
+                    result.push(Oper::Operand(operand.parse().unwrap())); // We check it when filling
+                    operand.clear();
+                } 
+
                 loop {
                     match temp.last() {
-                        Some(last_operation) if last_operation.get_priority() >= current_operation.get_priority() => {
-                            result.push(*last_operation);
+                        Some(not_bracket) if not_bracket != &Oper::Bracket => {
+                            result.push(*not_bracket);
                             temp.pop();
+                        },
+                        Some(bracket) if bracket == &Oper::Bracket => {
+                            temp.pop();
+                            break;
                         }
                         _ => { break; }
                     }
                 }
-                temp.push(current_operation);
             }
             number => {
                 operand.push(number); // If a char is not an operation symbol, it is a number, this fn doesn't check
@@ -535,6 +562,34 @@ mod tests {
         res.push(Oper::Mult);
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5* 43 0 21 ^15 09")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_plus_sub_and_brackets_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
+        res.push(Oper::Operand(43021.0));
+        res.push(Oper::Sub);
+        res.push(Oper::Add);
+        assert_eq!(convert(&String::from("2 3 87 + (49 5- 43 0 21)")), res)
+    }
+
+    #[test]
+    fn convert_numbers_with_plus_sub_and_many_brackets_correct() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
+        res.push(Oper::Operand(43021.0));
+        res.push(Oper::Operand(534.0));
+        res.push(Oper::Add);
+        res.push(Oper::Sub);
+        res.push(Oper::Add);
+        assert_eq!(convert(&String::from("2 3 87 + (49 5- (43 0 21 +534))")), res)
     }
 
     // ****************************************************************************************************
