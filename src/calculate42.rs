@@ -156,6 +156,23 @@ pub fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<i32> {
                         },
                         None => return None
                     }
+                },
+                Oper::Mult => {
+                    match left {
+                        Some(l) => {
+                            match right {
+                                Some(r) => {
+                                    new_rpn_expr.push(Oper::Operand(l * r));
+                                    left = None;
+                                    right = None;
+                                    counter += 1;
+                                    was_operation = true;
+                                },
+                                None => return None
+                            }
+                        },
+                        None => return None
+                    }
                 }
                 _ => return None
             }
@@ -677,5 +694,64 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Sub);
         assert_eq!(recursive_calculate(&rpn), Some(-666));
+    }
+
+    #[test]
+    fn calculate_mult_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Mult);
+        assert_eq!(recursive_calculate(&rpn), Some(100170));
+    }
+    
+    #[test]
+    fn calculate_mult_one_negative_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(-189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Mult);
+        assert_eq!(recursive_calculate(&rpn), Some(-100170));
+    }
+
+    #[test]
+    fn calculate_mult_two_negative_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(-189));
+        rpn.push(Oper::Operand(-530));
+        rpn.push(Oper::Mult);
+        assert_eq!(recursive_calculate(&rpn), Some(100170));
+    }
+
+    #[test]
+    fn calculate_plus_and_mult_with_brackets_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Mult);
+        assert_eq!(recursive_calculate(&rpn), Some(233675));
+    }
+
+    #[test]
+    fn calculate_plus_and_mult_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Mult);
+        assert_eq!(recursive_calculate(&rpn), Some(161595));
     }
 }
