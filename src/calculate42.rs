@@ -147,6 +147,7 @@ pub fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
                         Oper::Mult => left_number * right_number,
                         Oper::Div => left_number / right_number,
                         Oper::Rem => left_number % right_number,
+                        Oper::Exp => left_number.powf(right_number),
                         _ => return None
                     };
 
@@ -859,5 +860,123 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Rem);
         assert_eq!(recursive_calculate(&rpn), Some(3.0));
+    }
+
+    #[test]
+    fn calculate_exp_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(5.0));
+        rpn.push(Oper::Operand(3.0));
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(125.0));
+    }
+    
+    #[test]
+    fn calculate_exp_left_negative_right_odd_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(-5.0));
+        rpn.push(Oper::Operand(3.0));
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(-125.0));
+    }
+        
+    #[test]
+    fn calculate_exp_left_negative_right_even_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(-5.0));
+        rpn.push(Oper::Operand(4.0));
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(625.0));
+    }
+
+    #[test]
+    fn calculate_exp_right_negative_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(5.0));
+        rpn.push(Oper::Operand(-2.0));
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(1.0 / 25.0));
+    }
+
+    #[test]
+    fn calculate_div_two_negative_right_even_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(-5.0));
+        rpn.push(Oper::Operand(-2.0));
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(1.0 / 25.0));
+    }
+    
+    #[test]
+    fn calculate_div_two_negative_right_odd_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(-5.0));
+        rpn.push(Oper::Operand(-3.0));
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(-1.0 / 125.0));
+    }
+
+    #[test]
+    fn calculate_plus_and_exp_with_brackets_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(4.0));
+        rpn.push(Oper::Operand(1.0));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Operand(3.0));
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(125.0));
+    }
+
+    #[test]
+    fn calculate_plus_and_exp_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(5.0));
+        rpn.push(Oper::Operand(2.0));
+        rpn.push(Oper::Operand(1.0));
+        rpn.push(Oper::Add);
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(125.0));
+    }
+    
+    #[test]
+    fn calculate_mult_and_exp_with_brackets_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(4.0));
+        rpn.push(Oper::Operand(2.0));
+        rpn.push(Oper::Mult);
+        rpn.push(Oper::Operand(2.0));
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(64.0));
+    }
+
+    #[test]
+    fn calculate_mult_and_exp_correct() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Operand(2.0));
+        rpn.push(Oper::Operand(2.0));
+        rpn.push(Oper::Operand(3.0));
+        rpn.push(Oper::Mult);
+        rpn.push(Oper::Exp);
+        assert_eq!(recursive_calculate(&rpn), Some(64.0));
     }
 }
