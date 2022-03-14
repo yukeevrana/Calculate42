@@ -1,6 +1,6 @@
 use regex;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Oper {
     Add,
     Sub,
@@ -9,7 +9,7 @@ pub enum Oper {
     Rem,
     Exp,
     // TODO: unary negation (right-associative) with priority like Exp
-    Operand(i32)
+    Operand(f64)
 }
 
 impl Oper {
@@ -92,11 +92,11 @@ pub fn convert(math_expr: &String) -> Vec<Oper> {
     result
 }
 
-pub fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<i32> {
+pub fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
     let mut new_rpn_expr: Vec<Oper> = Vec::new();
     let mut counter: u32 = 0;
-    let mut left: Option<i32> = None;
-    let mut right: Option<i32> = None;
+    let mut left: Option<f64> = None;
+    let mut right: Option<f64> = None;
     let mut was_operation: bool = false;
 
     for oper in rpn_expr {
@@ -249,7 +249,7 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(2387.0));
         assert_eq!(convert(&String::from("2387")), res)
     }
 
@@ -258,7 +258,7 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(2387.0));
         assert_eq!(convert(&String::from("2 3 87")), res)
     }
 
@@ -267,8 +267,8 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5")), res)
     }
@@ -278,9 +278,9 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
+        res.push(Oper::Operand(2387.0));
         res.push(Oper::Add);
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 ++ 49 5")), res)
     }
@@ -290,8 +290,8 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Add);
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5+")), res)
@@ -302,10 +302,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Add);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5+ 43 0 21")), res)
     }
@@ -315,8 +315,8 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Sub);
         assert_eq!(convert(&String::from("2 3 87 - 49 5")), res)
     }
@@ -326,10 +326,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Add);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Sub);
         assert_eq!(convert(&String::from("2 3 87 + 49 5- 43 0 21")), res)
     }
@@ -339,10 +339,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Sub);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 - 49 5+ 43 0 21")), res)
     }
@@ -352,8 +352,8 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Mult);
         assert_eq!(convert(&String::from("2 3 87 * 49 5")), res)
     }
@@ -363,9 +363,9 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Mult);
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5* 43 0 21")), res)
@@ -376,10 +376,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Mult);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 * 49 5+ 43 0 21")), res)
     }
@@ -388,8 +388,8 @@ mod tests {
     fn convert_numbers_with_div_correct() {
         use super::*;
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Div);
         assert_eq!(convert(&String::from("2 3 87 / 49 5")), res)
     }
@@ -399,10 +399,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Div);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Mult);
         assert_eq!(convert(&String::from("2 3 87 / 49 5* 43 0 21")), res)
     }
@@ -412,9 +412,9 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Div);
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5/ 43 0 21")), res)
@@ -425,10 +425,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Div);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 / 49 5+ 43 0 21")), res)
     }
@@ -437,8 +437,8 @@ mod tests {
     fn convert_numbers_with_rem_correct() {
         use super::*;
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Rem);
         assert_eq!(convert(&String::from("2 3 87 % 49 5")), res)
     }
@@ -448,10 +448,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Rem);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Mult);
         assert_eq!(convert(&String::from("2 3 87 % 49 5* 43 0 21")), res)
     }
@@ -461,9 +461,9 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Rem);
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5% 43 0 21")), res)
@@ -474,10 +474,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Rem);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 % 49 5+ 43 0 21")), res)
     }
@@ -486,8 +486,8 @@ mod tests {
     fn convert_numbers_with_exp_correct() {
         use super::*;
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Exp);
         assert_eq!(convert(&String::from("2 3 87 ^ 49 5")), res)
     }
@@ -497,10 +497,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Exp);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Mult);
         assert_eq!(convert(&String::from("2 3 87 ^ 49 5* 43 0 21")), res)
     }
@@ -510,9 +510,9 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Exp);
         res.push(Oper::Mult);
         assert_eq!(convert(&String::from("2 3 87 * 49 5^ 43 0 21")), res)
@@ -523,9 +523,9 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Exp);
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 + 49 5^ 43 0 21")), res)
@@ -536,10 +536,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
         res.push(Oper::Exp);
-        res.push(Oper::Operand(43021));
+        res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
         assert_eq!(convert(&String::from("2 3 87 ^ 49 5+ 43 0 21")), res)
     }
@@ -549,10 +549,10 @@ mod tests {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
-        res.push(Oper::Operand(2387));
-        res.push(Oper::Operand(495));
-        res.push(Oper::Operand(43021));
-        res.push(Oper::Operand(1509));
+        res.push(Oper::Operand(2387.0));
+        res.push(Oper::Operand(495.0));
+        res.push(Oper::Operand(43021.0));
+        res.push(Oper::Operand(1509.0));
         res.push(Oper::Exp);
         res.push(Oper::Mult);
         res.push(Oper::Add);
@@ -576,8 +576,8 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        assert_eq!(recursive_calculate(&rpn), Some(189));
+        rpn.push(Oper::Operand(189.0));
+        assert_eq!(recursive_calculate(&rpn), Some(189.0));
     }
 
     #[test]
@@ -585,8 +585,8 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
         assert_eq!(recursive_calculate(&rpn), None);
     }
 
@@ -595,10 +595,10 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Add);
-        assert_eq!(recursive_calculate(&rpn), Some(719));
+        assert_eq!(recursive_calculate(&rpn), Some(719.0));
     }
 
     #[test]
@@ -606,7 +606,7 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Add);
         assert_eq!(recursive_calculate(&rpn), None);
     }
@@ -616,9 +616,9 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
-        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
+        rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Add);
         assert_eq!(recursive_calculate(&rpn), None);
     }
@@ -628,8 +628,8 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Add);
         assert_eq!(recursive_calculate(&rpn), None);
@@ -640,12 +640,12 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
-        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
+        rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Add);
-        assert_eq!(recursive_calculate(&rpn), Some(1044));
+        assert_eq!(recursive_calculate(&rpn), Some(1044.0));
     }
 
     #[test]
@@ -653,10 +653,10 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(530));
-        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530.0));
+        rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Sub);
-        assert_eq!(recursive_calculate(&rpn), Some(341));
+        assert_eq!(recursive_calculate(&rpn), Some(341.0));
     }
     
     #[test]
@@ -664,10 +664,10 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Sub);
-        assert_eq!(recursive_calculate(&rpn), Some(-341));
+        assert_eq!(recursive_calculate(&rpn), Some(-341.0));
     }
 
     #[test]
@@ -675,12 +675,12 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Add);
-        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Sub);
-        assert_eq!(recursive_calculate(&rpn), Some(394));
+        assert_eq!(recursive_calculate(&rpn), Some(394.0));
     }
 
     #[test]
@@ -688,12 +688,12 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
-        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
+        rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Sub);
-        assert_eq!(recursive_calculate(&rpn), Some(-666));
+        assert_eq!(recursive_calculate(&rpn), Some(-666.0));
     }
 
     #[test]
@@ -701,10 +701,10 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(530));
-        rpn.push(Oper::Operand(189));
+        rpn.push(Oper::Operand(530.0));
+        rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(100170));
+        assert_eq!(recursive_calculate(&rpn), Some(100170.0));
     }
     
     #[test]
@@ -712,10 +712,10 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(-189));
-        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(-189.0));
+        rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(-100170));
+        assert_eq!(recursive_calculate(&rpn), Some(-100170.0));
     }
 
     #[test]
@@ -723,10 +723,10 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(-189));
-        rpn.push(Oper::Operand(-530));
+        rpn.push(Oper::Operand(-189.0));
+        rpn.push(Oper::Operand(-530.0));
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(100170));
+        assert_eq!(recursive_calculate(&rpn), Some(100170.0));
     }
 
     #[test]
@@ -734,12 +734,12 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Add);
-        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(233675));
+        assert_eq!(recursive_calculate(&rpn), Some(233675.0));
     }
 
     #[test]
@@ -747,11 +747,11 @@ mod tests {
         use super::*;
         
         let mut rpn: Vec<Oper> = Vec::new();
-        rpn.push(Oper::Operand(189));
-        rpn.push(Oper::Operand(530));
-        rpn.push(Oper::Operand(325));
+        rpn.push(Oper::Operand(189.0));
+        rpn.push(Oper::Operand(530.0));
+        rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(161595));
+        assert_eq!(recursive_calculate(&rpn), Some(161595.0));
     }
 }
