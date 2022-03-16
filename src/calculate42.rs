@@ -34,6 +34,24 @@ pub fn is_math_expr(message: &String) -> bool {
     re.is_match(message.as_str())
 }
 
+/// Checks if the string has the correct amount and order of brackets
+pub fn is_brackets_agreed(message: &String) -> bool {
+    let mut left_counter: u32 = 0;
+    let mut right_counter: u32 = 0;
+
+    for ch in message.chars() {
+        match ch {
+            '(' => left_counter += 1,
+            ')' => right_counter += 1,
+            _ => {}
+        }
+        if right_counter > left_counter { return false }
+    }
+    
+    if left_counter != right_counter { false }
+    else { true }
+}
+
 /// Converts a string with a *valid* (but not necessarily correct) math expression 
 /// to a stack with an expression in RPN. Tests will show in detail.
 pub fn convert(math_expr: &String) -> Vec<Oper> {
@@ -245,6 +263,46 @@ mod tests {
         }
     }
 
+    // ****************************************************************************************************
+    //
+    //
+    //is_brackets_agreed tests ****************************************************************************
+    #[test]
+    fn is_brackets_agreed_correct() {
+        use super::*;
+
+        for message in ["(2 + 2f)", "3 kk* (3)", "((4) !/(4))", "(5)- ?(5)", "1* nana*1", "word", "another word", ""] {
+            assert_eq!(is_brackets_agreed(&String::from(message)), true);
+        }
+    }
+
+    #[test]
+    fn is_brackets_agreed_more_left() {
+        use super::*;
+
+        for message in ["((2 + 2f)", "(3 kk* (3)", "(((4) !/(4))", "((5)- ?(5)", "1* nana*(1", "(word", "another (word", "("] {
+            assert_eq!(is_brackets_agreed(&String::from(message)), false);
+        }
+    }
+    
+    #[test]
+    fn is_brackets_agreed_more_right() {
+        use super::*;
+
+        for message in ["(2) + 2f)", "3) kk* (3)", "((4) !/(4)))", "(5))- ?(5)", ")1* nana*1", "word)", "another) word", ")"] {
+            assert_eq!(is_brackets_agreed(&String::from(message)), false);
+        }
+    }
+
+    #[test]
+    fn is_brackets_agreed_incorrect() {
+        use super::*;
+
+        for message in [")2 + 2f(", "3 kk* )3(", "((4) !/)4)(", ")5(- ?(5)"] {
+            assert_eq!(is_brackets_agreed(&String::from(message)), false);
+        }
+    }
+    
     // ****************************************************************************************************
     //
     //
