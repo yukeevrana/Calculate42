@@ -1,7 +1,7 @@
 use regex;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Oper {
+enum Oper {
     Add,
     Sub,
     Mult,
@@ -27,15 +27,22 @@ impl Oper {
     }
 }
 
+pub fn try_calculate(message: &String) -> Option<f64> {
+    if is_math_expr(message) && is_brackets_agreed(message) { 
+        recursive_calculate(&convert(message)) 
+    }
+    else { None }
+}
+
 /// Checks if string is a valid math expression 
-pub fn is_math_expr(message: &String) -> bool {
+fn is_math_expr(message: &String) -> bool {
     let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)\^]+$").unwrap(); // Numbers, whitespaces, +, -, *, /, %, (, )
 
     re.is_match(message.as_str())
 }
 
 /// Checks if the string has the correct amount and order of brackets
-pub fn is_brackets_agreed(message: &String) -> bool {
+fn is_brackets_agreed(message: &String) -> bool {
     let mut left_counter: u32 = 0;
     let mut right_counter: u32 = 0;
 
@@ -54,7 +61,7 @@ pub fn is_brackets_agreed(message: &String) -> bool {
 
 /// Converts a string with a *valid* (but not necessarily correct) math expression 
 /// to a stack with an expression in RPN. Tests will show in detail.
-pub fn convert(math_expr: &String) -> Vec<Oper> {
+fn convert(math_expr: &String) -> Vec<Oper> {
     let mut result: Vec<Oper> = Vec::new();
     let mut temp: Vec<Oper> = Vec::new();
     let mut operand = String::new();
@@ -137,7 +144,7 @@ pub fn convert(math_expr: &String) -> Vec<Oper> {
     result
 }
 
-pub fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
+fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
     let mut new_rpn_expr: Vec<Oper> = Vec::new();
     let mut counter: u32 = 0;
     let mut left: Option<f64> = None;
