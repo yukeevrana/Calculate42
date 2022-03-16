@@ -36,7 +36,7 @@ pub fn try_calculate(message: &String) -> Option<f64> {
 
 /// Checks if string is a valid math expression 
 fn is_math_expr(message: &String) -> bool {
-    let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)\^]+$").unwrap(); // Numbers, whitespaces, +, -, *, /, %, (, )
+    let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)\^\.,]+$").unwrap(); // Numbers, whitespaces, +, -, *, /, %, (, )
 
     re.is_match(message.as_str())
 }
@@ -66,7 +66,7 @@ fn convert(math_expr: &String) -> Vec<Oper> {
     let mut temp: Vec<Oper> = Vec::new();
     let mut operand = String::new();
 
-    for current_ch in math_expr.replace(" ", "").chars() {
+    for current_ch in math_expr.replace(" ", "").replace(",", ".").chars() {
         match current_ch {
             operation_symbol if 
                 operation_symbol == '+' || operation_symbol == '-' || operation_symbol == '*' || 
@@ -247,7 +247,7 @@ mod tests {
     fn is_math_expr_looks_like_math_expr_without_whitespaces() {
         use super::*;
 
-        for message in ["2+2", "3*3", "4/4", "5-5", "1**1", "6//6", "7%7", ")8(8", "9^9"] {
+        for message in ["2.0+2,0", "3*3", "4/4", "5-5", "1**1", "6//6", "7%7", ")8(8", "9^9"] {
             assert!(is_math_expr(&String::from(message)));
         }
     }
@@ -256,7 +256,7 @@ mod tests {
     fn is_math_expr_looks_like_math_expr_with_whitespaces() {
         use super::*;
 
-        for message in ["2 + 2", "3 * 3", "4 /4", "5- 5", "1* *1", "6    //6", "7%   7", ") 8(    8", "9^ 9"] {
+        for message in ["2.0 + 2, 2", "3 * 3", "4 /4", "5- 5", "1* *1", "6    //6", "7%   7", ") 8(    8", "9^ 9"] {
             assert!(is_math_expr(&String::from(message)));
         }
     }
@@ -324,12 +324,48 @@ mod tests {
     }
 
     #[test]
+    fn convert_non_integer_numbers_with_dots() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387.2));
+        assert_eq!(convert(&String::from("2387.2")), res)
+    }
+
+    #[test]
+    fn convert_non_integer_numbers_with_commas() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387.2));
+        assert_eq!(convert(&String::from("2387,2")), res)
+    }
+
+    #[test]
     fn convert_numbers_with_whitespaces() {
         use super::*;
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387.0));
         assert_eq!(convert(&String::from("2 3 87")), res)
+    }
+
+    #[test]
+    fn convert_non_integer_numbers_with_dots_and_whitespaces() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387.2));
+        assert_eq!(convert(&String::from("23 8 7. 2")), res)
+    }
+
+    #[test]
+    fn convert_non_integer_numbers_with_commas_and_whitespaces() {
+        use super::*;
+
+        let mut res: Vec<Oper> = Vec::new();
+        res.push(Oper::Operand(2387.2));
+        assert_eq!(convert(&String::from("2 387 , 2")), res)
     }
 
     #[test]
