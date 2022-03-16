@@ -36,6 +36,7 @@ pub fn try_calculate(message: &String) -> Option<f64> {
 
 /// Checks if string is a valid math expression 
 fn is_math_expr(message: &String) -> bool {
+    // unwrap will panic on compilation, if regex is wrong, so I don't check
     let re = regex::Regex::new(r"^[\d\s\+\-\*/%\(\)\^\.,]+$").unwrap(); // Numbers, whitespaces, +, -, *, /, %, (, )
 
     re.is_match(message.as_str())
@@ -74,8 +75,11 @@ fn convert(math_expr: &String) -> Vec<Oper> {
                 operation_symbol == '(' => {
 
                 // If found an operation symbol, the previous number has ended, so we will add it to result
-                if operand != "" {
-                    result.push(Oper::Operand(operand.parse().unwrap())); // We check it below when filling
+                if operand != "" {                    
+                    match operand.parse() {
+                        Ok(n) => result.push(Oper::Operand(n)),
+                        _ => {}
+                    }
                     operand.clear();
                 } 
 
@@ -106,7 +110,10 @@ fn convert(math_expr: &String) -> Vec<Oper> {
             ')' => {                
                 // If found a bracket, the previous number has ended, so we will add it to result
                 if operand != "" {
-                    result.push(Oper::Operand(operand.parse().unwrap())); // We check it when filling
+                    match operand.parse() {
+                        Ok(n) => result.push(Oper::Operand(n)),
+                        _ => {}
+                    }
                     operand.clear();
                 } 
 
@@ -132,7 +139,10 @@ fn convert(math_expr: &String) -> Vec<Oper> {
     
     // Don't forget the last number
     if operand != "" {
-        result.push(Oper::Operand(operand.parse().unwrap())); // We don't check
+        match operand.parse() {
+            Ok(n) => result.push(Oper::Operand(n)),
+            _ => {}
+        }
     }
 
     // Don't forget operations on the stack
