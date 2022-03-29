@@ -34,12 +34,12 @@ impl CalculateError {
     fn new(error_type: CalculateErrorType) -> CalculateError {
         CalculateError {
             details: match error_type {
-                NotMathExpr => { String::from("Input is not a mathematical expression.") },
-                BracketsNotAgreed => { String::from("Brackets in the expression are not agreed.") },
-                OperandNotNumber => { String::from("One of operands is not a correct number.") },
-                MissedOperation => { String::from("Missed operation.") },
-                MissedOperand => { String::from("Missed operand.") },
-                UnknownError => { String::from("Unknown error.") }   
+                CalculateErrorType::NotMathExpr => { String::from("Input is not a mathematical expression.") },
+                CalculateErrorType::BracketsNotAgreed => { String::from("Brackets in the expression are not agreed.") },
+                CalculateErrorType::OperandNotNumber => { String::from("One of operands is not a correct number.") },
+                CalculateErrorType::MissedOperation => { String::from("Missed operation.") },
+                CalculateErrorType::MissedOperand => { String::from("Missed operand.") },
+                CalculateErrorType::UnknownError => { String::from("Unknown error.") }   
             },
             error_type: error_type
         }
