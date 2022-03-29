@@ -35,8 +35,8 @@ async fn main() {
         match message.text() {
             Some(t) => {
                 match calculate42::try_calculate(&String::from(t)) {
-                    Some(n) => { reply = format!("{}", n) },
-                    None => { reply = String::from("Failed to calculate") }
+                    Ok(n) => { reply = format!("{}", n) },
+                    Err(e) => { reply = String::from(format!("{}", e)) }
                 }
             },
             None => reply = String::from("Eh?")

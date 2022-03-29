@@ -1,5 +1,6 @@
 use regex;
 
+// TODO: recursive enum with operations that contains other operations (use Box<T>)
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Oper {
     Add,
@@ -11,6 +12,50 @@ enum Oper {
     Bracket,
     // TODO: unary negation (right-associative) with priority like Exp
     Operand(f64)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum CalculateErrorType {
+    NotMathExpr,
+    BracketsNotAgreed,
+    OperandNotNumber,
+    MissedOperation,
+    MissedOperand,
+    UnknownError
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CalculateError {
+    error_type: CalculateErrorType,
+    details: String
+}
+
+impl CalculateError {
+    fn new(error_type: CalculateErrorType) -> CalculateError {
+        CalculateError {
+            details: match error_type {
+                NotMathExpr => { String::from("Input is not a mathematical expression.") },
+                BracketsNotAgreed => { String::from("Brackets in the expression are not agreed.") },
+                OperandNotNumber => { String::from("One of operands is not a correct number.") },
+                MissedOperation => { String::from("Missed operation.") },
+                MissedOperand => { String::from("Missed operand.") },
+                UnknownError => { String::from("Unknown error.") }   
+            },
+            error_type: error_type
+        }
+    }
+}
+
+impl std::fmt::Display for CalculateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.details)
+    }
+}
+
+impl std::error::Error for CalculateError {
+    fn description(&self) -> &str {
+        &self.details
+    }
 }
 
 impl Oper {
@@ -27,14 +72,11 @@ impl Oper {
     }
 }
 
-pub fn try_calculate(message: &String) -> Option<f64> {
-    if is_math_expr(message) && is_brackets_agreed(message) { 
-        match convert(message) {
-            Some(v) => recursive_calculate(&v),
-            None => None
-        }    
-    }
-    else { None }
+pub fn try_calculate(message: &String) -> Result<f64, CalculateError> {
+    if !is_math_expr(message) { return Err(CalculateError::new(CalculateErrorType::NotMathExpr)) }
+    if !are_brackets_agreed(message) { return Err(CalculateError::new(CalculateErrorType::BracketsNotAgreed)) }
+
+    recursive_calculate(&convert(message)?)
 }
 
 /// Checks if string is a valid math expression 
@@ -45,7 +87,7 @@ fn is_math_expr(message: &String) -> bool {
 }
 
 /// Checks if the string has the correct amount and order of brackets
-fn is_brackets_agreed(message: &String) -> bool {
+fn are_brackets_agreed(message: &String) -> bool {
     let mut left_counter: u32 = 0;
     let mut right_counter: u32 = 0;
 
@@ -79,7 +121,7 @@ fn try_push_operand(operand: &mut String, stack: &mut Vec<Oper>) -> bool {
 
 /// Converts a string with a *valid* (but not necessarily correct) math expression 
 /// to a stack with an expression in RPN. Tests will show in detail.
-fn convert(math_expr: &String) -> Option<Vec<Oper>> {
+fn convert(math_expr: &String) -> Result<Vec<Oper>, CalculateError> {
     let mut result: Vec<Oper> = Vec::new();
     let mut temp: Vec<Oper> = Vec::new();
     let mut operand = String::new();
@@ -92,7 +134,7 @@ fn convert(math_expr: &String) -> Option<Vec<Oper>> {
                 operation_symbol == '(' => {
 
                 // If found an operation symbol, the previous number has ended, so we will add it to result
-                if operand != "" && !try_push_operand(&mut operand, &mut result) { return None };
+                if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(CalculateError::new(CalculateErrorType::OperandNotNumber)) };
 
                 let current_operation = match operation_symbol {
                     '+' => Oper::Add,
@@ -120,7 +162,7 @@ fn convert(math_expr: &String) -> Option<Vec<Oper>> {
             },
             ')' => {                
                 // If found a bracket, the previous number has ended, so we will add it to result
-                if operand != "" && !try_push_operand(&mut operand, &mut result) { return None };
+                if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(CalculateError::new(CalculateErrorType::OperandNotNumber)) };
 
                 loop {
                     match temp.last() {
@@ -143,7 +185,7 @@ fn convert(math_expr: &String) -> Option<Vec<Oper>> {
     }
     
     // Don't forget the last number
-    if operand != "" && !try_push_operand(&mut operand, &mut result) { return None };
+    if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(CalculateError::new(CalculateErrorType::OperandNotNumber)) };
 
     // Don't forget operations on the stack
     temp.reverse();
@@ -151,10 +193,10 @@ fn convert(math_expr: &String) -> Option<Vec<Oper>> {
         result.push(oper);
     }
 
-    Some(result)
+    Ok(result)
 }
 
-fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
+fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Result<f64, CalculateError> {
     let mut new_rpn_expr: Vec<Oper> = Vec::new();
     let mut counter: u32 = 0;
     let mut left: Option<f64> = None;
@@ -189,12 +231,12 @@ fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
                     let left_number: f64;
                     match left {
                         Some(n) => left_number = n,
-                        None => return None
+                        None => return Err(CalculateError::new(CalculateErrorType::MissedOperand))
                     }
                     let right_number: f64;
                     match right {
                         Some(n) => right_number = n,
-                        None => return None
+                        None => return Err(CalculateError::new(CalculateErrorType::MissedOperand))
                     }
 
                     left = None;
@@ -210,7 +252,7 @@ fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
                         Oper::Div => left_number / right_number,
                         Oper::Rem => left_number % right_number,
                         Oper::Exp => left_number.powf(right_number),
-                        _ => return None
+                        _ => return Err(CalculateError::new(CalculateErrorType::UnknownError))
                     };
 
                     new_rpn_expr.push(Oper::Operand(result));
@@ -224,6 +266,9 @@ fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
             new_rpn_expr.push(Oper::Operand(n));
             counter += 1;
         }
+        Some(_) if right != None => {
+            return Err(CalculateError::new(CalculateErrorType::MissedOperation))
+        }
         _ => {}
     }
 
@@ -236,12 +281,12 @@ fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Option<f64> {
             Some(operand) => {
                 match operand {
                     Oper::Operand(number) => {
-                        return Some(number);
+                        return Ok(number);
                     },
-                    _ => return None
+                    _ => return Err(CalculateError::new(CalculateErrorType::UnknownError))
                 }
             },
-            _ => return None
+            _ => return Err(CalculateError::new(CalculateErrorType::NotMathExpr))
         }
     }
 }
@@ -283,13 +328,13 @@ mod tests {
     // ****************************************************************************************************
     //
     //
-    //is_brackets_agreed tests ****************************************************************************
+    //are_brackets_agreed tests ****************************************************************************
     #[test]
     fn is_brackets_agreed_correct() {
         use super::*;
 
         for message in ["(2 + 2f)", "3 kk* (3)", "((4) !/(4))", "(5)- ?(5)", "1* nana*1", "word", "another word", ""] {
-            assert_eq!(is_brackets_agreed(&String::from(message)), true);
+            assert_eq!(are_brackets_agreed(&String::from(message)), true);
         }
     }
 
@@ -298,7 +343,7 @@ mod tests {
         use super::*;
 
         for message in ["((2 + 2f)", "(3 kk* (3)", "(((4) !/(4))", "((5)- ?(5)", "1* nana*(1", "(word", "another (word", "("] {
-            assert_eq!(is_brackets_agreed(&String::from(message)), false);
+            assert_eq!(are_brackets_agreed(&String::from(message)), false);
         }
     }
     
@@ -307,7 +352,7 @@ mod tests {
         use super::*;
 
         for message in ["(2) + 2f)", "3) kk* (3)", "((4) !/(4)))", "(5))- ?(5)", ")1* nana*1", "word)", "another) word", ")"] {
-            assert_eq!(is_brackets_agreed(&String::from(message)), false);
+            assert_eq!(are_brackets_agreed(&String::from(message)), false);
         }
     }
 
@@ -316,7 +361,7 @@ mod tests {
         use super::*;
 
         for message in [")2 + 2f(", "3 kk* )3(", "((4) !/)4)(", ")5(- ?(5)"] {
-            assert_eq!(is_brackets_agreed(&String::from(message)), false);
+            assert_eq!(are_brackets_agreed(&String::from(message)), false);
         }
     }
     
@@ -330,7 +375,7 @@ mod tests {
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387.0));
-        assert_eq!(convert(&String::from("2387")), Some(res))
+        assert_eq!(convert(&String::from("2387")), Ok(res))
     }
 
     #[test]
@@ -339,7 +384,7 @@ mod tests {
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387.2));
-        assert_eq!(convert(&String::from("2387.2")), Some(res))
+        assert_eq!(convert(&String::from("2387.2")), Ok(res))
     }
 
     #[test]
@@ -348,7 +393,7 @@ mod tests {
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387.2));
-        assert_eq!(convert(&String::from("2387,2")), Some(res))
+        assert_eq!(convert(&String::from("2387,2")), Ok(res))
     }
 
     #[test]
@@ -357,7 +402,7 @@ mod tests {
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387.0));
-        assert_eq!(convert(&String::from("2 3 87")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87")), Ok(res))
     }
 
     #[test]
@@ -366,7 +411,7 @@ mod tests {
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387.2));
-        assert_eq!(convert(&String::from("23 8 7. 2")), Some(res))
+        assert_eq!(convert(&String::from("23 8 7. 2")), Ok(res))
     }
 
     #[test]
@@ -375,7 +420,7 @@ mod tests {
 
         let mut res: Vec<Oper> = Vec::new();
         res.push(Oper::Operand(2387.2));
-        assert_eq!(convert(&String::from("2 387 , 2")), Some(res))
+        assert_eq!(convert(&String::from("2 387 , 2")), Ok(res))
     }
 
     #[test]
@@ -386,7 +431,7 @@ mod tests {
         res.push(Oper::Operand(2387.0));
         res.push(Oper::Operand(495.0));
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5")), Ok(res))
     }
 
     #[test]
@@ -398,7 +443,7 @@ mod tests {
         res.push(Oper::Add);
         res.push(Oper::Operand(495.0));
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 ++ 49 5")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 ++ 49 5")), Ok(res))
     }
 
     #[test]
@@ -410,7 +455,7 @@ mod tests {
         res.push(Oper::Operand(495.0));
         res.push(Oper::Add);
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5+")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5+")), Ok(res))
     }
 
     #[test]
@@ -423,7 +468,7 @@ mod tests {
         res.push(Oper::Add);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5+ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5+ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -434,7 +479,7 @@ mod tests {
         res.push(Oper::Operand(2387.0));
         res.push(Oper::Operand(495.0));
         res.push(Oper::Sub);
-        assert_eq!(convert(&String::from("2 3 87 - 49 5")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 - 49 5")), Ok(res))
     }
 
     #[test]
@@ -447,7 +492,7 @@ mod tests {
         res.push(Oper::Add);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Sub);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5- 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5- 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -460,7 +505,7 @@ mod tests {
         res.push(Oper::Sub);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 - 49 5+ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 - 49 5+ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -471,7 +516,7 @@ mod tests {
         res.push(Oper::Operand(2387.0));
         res.push(Oper::Operand(495.0));
         res.push(Oper::Mult);
-        assert_eq!(convert(&String::from("2 3 87 * 49 5")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 * 49 5")), Ok(res))
     }
 
     #[test]
@@ -484,7 +529,7 @@ mod tests {
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Mult);
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5* 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5* 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -497,7 +542,7 @@ mod tests {
         res.push(Oper::Mult);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 * 49 5+ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 * 49 5+ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -507,7 +552,7 @@ mod tests {
         res.push(Oper::Operand(2387.0));
         res.push(Oper::Operand(495.0));
         res.push(Oper::Div);
-        assert_eq!(convert(&String::from("2 3 87 / 49 5")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 / 49 5")), Ok(res))
     }
 
     #[test]
@@ -520,7 +565,7 @@ mod tests {
         res.push(Oper::Div);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Mult);
-        assert_eq!(convert(&String::from("2 3 87 / 49 5* 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 / 49 5* 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -533,7 +578,7 @@ mod tests {
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Div);
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5/ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5/ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -546,7 +591,7 @@ mod tests {
         res.push(Oper::Div);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 / 49 5+ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 / 49 5+ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -556,7 +601,7 @@ mod tests {
         res.push(Oper::Operand(2387.0));
         res.push(Oper::Operand(495.0));
         res.push(Oper::Rem);
-        assert_eq!(convert(&String::from("2 3 87 % 49 5")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 % 49 5")), Ok(res))
     }
 
     #[test]
@@ -569,7 +614,7 @@ mod tests {
         res.push(Oper::Rem);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Mult);
-        assert_eq!(convert(&String::from("2 3 87 % 49 5* 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 % 49 5* 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -582,7 +627,7 @@ mod tests {
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Rem);
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5% 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5% 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -595,7 +640,7 @@ mod tests {
         res.push(Oper::Rem);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 % 49 5+ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 % 49 5+ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -605,7 +650,7 @@ mod tests {
         res.push(Oper::Operand(2387.0));
         res.push(Oper::Operand(495.0));
         res.push(Oper::Exp);
-        assert_eq!(convert(&String::from("2 3 87 ^ 49 5")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 ^ 49 5")), Ok(res))
     }
 
     #[test]
@@ -618,7 +663,7 @@ mod tests {
         res.push(Oper::Exp);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Mult);
-        assert_eq!(convert(&String::from("2 3 87 ^ 49 5* 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 ^ 49 5* 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -631,7 +676,7 @@ mod tests {
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Exp);
         res.push(Oper::Mult);
-        assert_eq!(convert(&String::from("2 3 87 * 49 5^ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 * 49 5^ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -644,7 +689,7 @@ mod tests {
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Exp);
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5^ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5^ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -657,7 +702,7 @@ mod tests {
         res.push(Oper::Exp);
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 ^ 49 5+ 43 0 21")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 ^ 49 5+ 43 0 21")), Ok(res))
     }
 
     #[test]
@@ -672,7 +717,7 @@ mod tests {
         res.push(Oper::Exp);
         res.push(Oper::Mult);
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + 49 5* 43 0 21 ^15 09")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + 49 5* 43 0 21 ^15 09")), Ok(res))
     }
 
     #[test]
@@ -685,7 +730,7 @@ mod tests {
         res.push(Oper::Operand(43021.0));
         res.push(Oper::Sub);
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + (49 5- 43 0 21)")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + (49 5- 43 0 21)")), Ok(res))
     }
 
     #[test]
@@ -700,19 +745,37 @@ mod tests {
         res.push(Oper::Add);
         res.push(Oper::Sub);
         res.push(Oper::Add);
-        assert_eq!(convert(&String::from("2 3 87 + (49 5- (43 0 21 +534))")), Some(res))
+        assert_eq!(convert(&String::from("2 3 87 + (49 5- (43 0 21 +534))")), Ok(res))
+    }
+    
+    #[test]
+    fn convert_operand_before_an_operation_is_not_a_number() {
+        use super::*;
+        assert_eq!(convert(&String::from("2 3 ..87 + 49 5")), Err(CalculateError::new(CalculateErrorType::OperandNotNumber)))
+    }
+        
+    #[test]
+    fn convert_operand_before_a_bracket_is_not_a_number() {
+        use super::*;
+        assert_eq!(convert(&String::from("(2 3 87 + 49.. 5)")), Err(CalculateError::new(CalculateErrorType::OperandNotNumber)))
+    }
+     
+    #[test]
+    fn convert_last_operand_is_not_a_number() {
+        use super::*;
+        assert_eq!(convert(&String::from("2 3 87 + 49.. 5")), Err(CalculateError::new(CalculateErrorType::OperandNotNumber)))
     }
 
     // ****************************************************************************************************
     //
     //
-    //recursive_calculate tests *************************************************************************************
+    //recursive_calculate tests ***************************************************************************
     #[test]
     fn calculate_empty_expr() {
         use super::*;
         
         let rpn: Vec<Oper> = Vec::new();
-        assert_eq!(recursive_calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), Err(CalculateError::new(CalculateErrorType::NotMathExpr)));
     }
 
     #[test]
@@ -721,7 +784,7 @@ mod tests {
         
         let mut rpn: Vec<Oper> = Vec::new();
         rpn.push(Oper::Operand(189.0));
-        assert_eq!(recursive_calculate(&rpn), Some(189.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(189.0));
     }
 
     #[test]
@@ -731,7 +794,7 @@ mod tests {
         let mut rpn: Vec<Oper> = Vec::new();
         rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Operand(530.0));
-        assert_eq!(recursive_calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), Err(CalculateError::new(CalculateErrorType::MissedOperation)));
     }
 
     #[test]
@@ -742,7 +805,7 @@ mod tests {
         rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Add);
-        assert_eq!(recursive_calculate(&rpn), Some(719.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(719.0));
     }
 
     #[test]
@@ -752,7 +815,16 @@ mod tests {
         let mut rpn: Vec<Oper> = Vec::new();
         rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Add);
-        assert_eq!(recursive_calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), Err(CalculateError::new(CalculateErrorType::MissedOperand)));
+    }
+
+    #[test]
+    fn calculate_plus() {
+        use super::*;
+        
+        let mut rpn: Vec<Oper> = Vec::new();
+        rpn.push(Oper::Add);
+        assert_eq!(recursive_calculate(&rpn), Err(CalculateError::new(CalculateErrorType::MissedOperand)));
     }
 
     #[test]
@@ -764,7 +836,7 @@ mod tests {
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Add);
-        assert_eq!(recursive_calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), Err(CalculateError::new(CalculateErrorType::MissedOperation)));
     }
 
     #[test]
@@ -776,7 +848,7 @@ mod tests {
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Add);
-        assert_eq!(recursive_calculate(&rpn), None);
+        assert_eq!(recursive_calculate(&rpn), Err(CalculateError::new(CalculateErrorType::MissedOperand)));
     }
 
     #[test]
@@ -789,7 +861,7 @@ mod tests {
         rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Add);
-        assert_eq!(recursive_calculate(&rpn), Some(1044.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(1044.0));
     }
 
     #[test]
@@ -800,7 +872,7 @@ mod tests {
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Sub);
-        assert_eq!(recursive_calculate(&rpn), Some(341.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(341.0));
     }
     
     #[test]
@@ -811,7 +883,7 @@ mod tests {
         rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Sub);
-        assert_eq!(recursive_calculate(&rpn), Some(-341.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(-341.0));
     }
 
     #[test]
@@ -824,7 +896,7 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Sub);
-        assert_eq!(recursive_calculate(&rpn), Some(394.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(394.0));
     }
 
     #[test]
@@ -837,7 +909,7 @@ mod tests {
         rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Sub);
-        assert_eq!(recursive_calculate(&rpn), Some(-666.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(-666.0));
     }
 
     #[test]
@@ -848,7 +920,7 @@ mod tests {
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Operand(189.0));
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(100170.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(100170.0));
     }
     
     #[test]
@@ -859,7 +931,7 @@ mod tests {
         rpn.push(Oper::Operand(-189.0));
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(-100170.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(-100170.0));
     }
 
     #[test]
@@ -870,7 +942,7 @@ mod tests {
         rpn.push(Oper::Operand(-189.0));
         rpn.push(Oper::Operand(-530.0));
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(100170.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(100170.0));
     }
 
     #[test]
@@ -883,7 +955,7 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(233675.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(233675.0));
     }
 
     #[test]
@@ -896,7 +968,7 @@ mod tests {
         rpn.push(Oper::Operand(325.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Mult);
-        assert_eq!(recursive_calculate(&rpn), Some(161595.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(161595.0));
     }
 
     #[test]
@@ -907,7 +979,7 @@ mod tests {
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Operand(106.0));
         rpn.push(Oper::Div);
-        assert_eq!(recursive_calculate(&rpn), Some(5.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(5.0));
     }
     
     #[test]
@@ -918,7 +990,7 @@ mod tests {
         rpn.push(Oper::Operand(530.0));
         rpn.push(Oper::Operand(-106.0));
         rpn.push(Oper::Div);
-        assert_eq!(recursive_calculate(&rpn), Some(-5.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(-5.0));
     }
 
     #[test]
@@ -929,7 +1001,7 @@ mod tests {
         rpn.push(Oper::Operand(-530.0));
         rpn.push(Oper::Operand(-106.0));
         rpn.push(Oper::Div);
-        assert_eq!(recursive_calculate(&rpn), Some(5.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(5.0));
     }
 
     #[test]
@@ -942,7 +1014,7 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Operand(106.0));
         rpn.push(Oper::Div);
-        assert_eq!(recursive_calculate(&rpn), Some(5.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(5.0));
     }
 
     #[test]
@@ -955,7 +1027,7 @@ mod tests {
         rpn.push(Oper::Operand(8.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Div);
-        assert_eq!(recursive_calculate(&rpn), Some(5.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(5.0));
     }
     
     #[test]
@@ -966,7 +1038,7 @@ mod tests {
         rpn.push(Oper::Operand(533.0));
         rpn.push(Oper::Operand(106.0));
         rpn.push(Oper::Rem);
-        assert_eq!(recursive_calculate(&rpn), Some(3.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(3.0));
     }
     
     #[test]
@@ -977,7 +1049,7 @@ mod tests {
         rpn.push(Oper::Operand(-533.0));
         rpn.push(Oper::Operand(106.0));
         rpn.push(Oper::Rem);
-        assert_eq!(recursive_calculate(&rpn), Some(-3.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(-3.0));
     }
         
     #[test]
@@ -988,7 +1060,7 @@ mod tests {
         rpn.push(Oper::Operand(533.0));
         rpn.push(Oper::Operand(-106.0));
         rpn.push(Oper::Rem);
-        assert_eq!(recursive_calculate(&rpn), Some(3.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(3.0));
     }
 
     #[test]
@@ -999,7 +1071,7 @@ mod tests {
         rpn.push(Oper::Operand(-533.0));
         rpn.push(Oper::Operand(-106.0));
         rpn.push(Oper::Rem);
-        assert_eq!(recursive_calculate(&rpn), Some(-3.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(-3.0));
     }
 
     #[test]
@@ -1012,7 +1084,7 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Operand(106.0));
         rpn.push(Oper::Rem);
-        assert_eq!(recursive_calculate(&rpn), Some(3.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(3.0));
     }
 
     #[test]
@@ -1025,7 +1097,7 @@ mod tests {
         rpn.push(Oper::Operand(8.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Rem);
-        assert_eq!(recursive_calculate(&rpn), Some(3.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(3.0));
     }
 
     #[test]
@@ -1036,7 +1108,7 @@ mod tests {
         rpn.push(Oper::Operand(5.0));
         rpn.push(Oper::Operand(3.0));
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(125.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(125.0));
     }
     
     #[test]
@@ -1047,7 +1119,7 @@ mod tests {
         rpn.push(Oper::Operand(-5.0));
         rpn.push(Oper::Operand(3.0));
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(-125.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(-125.0));
     }
         
     #[test]
@@ -1058,7 +1130,7 @@ mod tests {
         rpn.push(Oper::Operand(-5.0));
         rpn.push(Oper::Operand(4.0));
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(625.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(625.0));
     }
 
     #[test]
@@ -1069,7 +1141,7 @@ mod tests {
         rpn.push(Oper::Operand(5.0));
         rpn.push(Oper::Operand(-2.0));
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(1.0 / 25.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(1.0 / 25.0));
     }
 
     #[test]
@@ -1080,7 +1152,7 @@ mod tests {
         rpn.push(Oper::Operand(-5.0));
         rpn.push(Oper::Operand(-2.0));
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(1.0 / 25.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(1.0 / 25.0));
     }
     
     #[test]
@@ -1091,7 +1163,7 @@ mod tests {
         rpn.push(Oper::Operand(-5.0));
         rpn.push(Oper::Operand(-3.0));
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(-1.0 / 125.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(-1.0 / 125.0));
     }
 
     #[test]
@@ -1104,7 +1176,7 @@ mod tests {
         rpn.push(Oper::Add);
         rpn.push(Oper::Operand(3.0));
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(125.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(125.0));
     }
 
     #[test]
@@ -1117,7 +1189,7 @@ mod tests {
         rpn.push(Oper::Operand(1.0));
         rpn.push(Oper::Add);
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(125.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(125.0));
     }
     
     #[test]
@@ -1130,7 +1202,7 @@ mod tests {
         rpn.push(Oper::Mult);
         rpn.push(Oper::Operand(2.0));
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(64.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(64.0));
     }
 
     #[test]
@@ -1143,6 +1215,26 @@ mod tests {
         rpn.push(Oper::Operand(3.0));
         rpn.push(Oper::Mult);
         rpn.push(Oper::Exp);
-        assert_eq!(recursive_calculate(&rpn), Some(64.0));
+        assert_eq!(recursive_calculate(&rpn), Ok(64.0));
+    }
+    
+    // ****************************************************************************************************
+    //
+    //
+    //try_calculate tests *********************************************************************************
+    #[test]
+    fn try_calculate_not_math_expr() {
+        use super::*;
+        
+        let input = String::from("not a math expression");
+        assert_eq!(try_calculate(&input), Err(CalculateError::new(CalculateErrorType::NotMathExpr)));
+    }
+
+    #[test]
+    fn try_calculate_brackets_not_agreed() {
+        use super::*;
+        
+        let input = String::from("(2 + 2(");
+        assert_eq!(try_calculate(&input), Err(CalculateError::new(CalculateErrorType::BracketsNotAgreed)));
     }
 }
