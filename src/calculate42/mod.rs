@@ -1,6 +1,8 @@
 use regex;
 mod calculate_error;
-use calculate_error::{Error, ErrorType};
+
+pub use calculate_error::Error as CalcError;
+pub use calculate_error::ErrorType as CalcErrorType;
 
 #[cfg(test)]
 mod tests;
@@ -33,9 +35,9 @@ impl Oper {
     }
 }
 
-pub fn try_calculate(message: &String) -> Result<f64, Error> {
-    if !is_math_expr(message) { return Err(Error::new(ErrorType::NotMathExpr)) }
-    if !are_brackets_agreed(message) { return Err(Error::new(ErrorType::BracketsNotAgreed)) }
+pub fn try_calculate(message: &String) -> Result<f64, CalcError> {
+    if !is_math_expr(message) { return Err(CalcError::new(CalcErrorType::NotMathExpr)) }
+    if !are_brackets_agreed(message) { return Err(CalcError::new(CalcErrorType::BracketsNotAgreed)) }
 
     recursive_calculate(&convert(message)?)
 }
@@ -82,7 +84,7 @@ fn try_push_operand(operand: &mut String, stack: &mut Vec<Oper>) -> bool {
 
 /// Converts a string with a *valid* (but not necessarily correct) math expression 
 /// to a stack with an expression in RPN. Tests will show in detail.
-fn convert(math_expr: &String) -> Result<Vec<Oper>, Error> {
+fn convert(math_expr: &String) -> Result<Vec<Oper>, CalcError> {
     let mut result: Vec<Oper> = Vec::new();
     let mut temp: Vec<Oper> = Vec::new();
     let mut operand = String::new();
@@ -95,7 +97,7 @@ fn convert(math_expr: &String) -> Result<Vec<Oper>, Error> {
                 operation_symbol == '(' => {
 
                 // If found an operation symbol, the previous number has ended, so we will add it to result
-                if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(Error::new(ErrorType::OperandNotNumber)) };
+                if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(CalcError::new(CalcErrorType::OperandNotNumber)) };
 
                 let current_operation = match operation_symbol {
                     '+' => Oper::Add,
@@ -123,7 +125,7 @@ fn convert(math_expr: &String) -> Result<Vec<Oper>, Error> {
             },
             ')' => {                
                 // If found a bracket, the previous number has ended, so we will add it to result
-                if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(Error::new(ErrorType::OperandNotNumber)) };
+                if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(CalcError::new(CalcErrorType::OperandNotNumber)) };
 
                 loop {
                     match temp.last() {
@@ -146,7 +148,7 @@ fn convert(math_expr: &String) -> Result<Vec<Oper>, Error> {
     }
     
     // Don't forget the last number
-    if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(Error::new(ErrorType::OperandNotNumber)) };
+    if operand != "" && !try_push_operand(&mut operand, &mut result) { return Err(CalcError::new(CalcErrorType::OperandNotNumber)) };
 
     // Don't forget operations on the stack
     temp.reverse();
@@ -157,7 +159,7 @@ fn convert(math_expr: &String) -> Result<Vec<Oper>, Error> {
     Ok(result)
 }
 
-fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Result<f64, Error> {
+fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Result<f64, CalcError> {
     let mut new_rpn_expr: Vec<Oper> = Vec::new();
     let mut counter: u32 = 0;
     let mut left: Option<f64> = None;
@@ -192,12 +194,12 @@ fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Result<f64, Error> {
                     let left_number: f64;
                     match left {
                         Some(n) => left_number = n,
-                        None => return Err(Error::new(ErrorType::MissedOperand))
+                        None => return Err(CalcError::new(CalcErrorType::MissedOperand))
                     }
                     let right_number: f64;
                     match right {
                         Some(n) => right_number = n,
-                        None => return Err(Error::new(ErrorType::MissedOperand))
+                        None => return Err(CalcError::new(CalcErrorType::MissedOperand))
                     }
 
                     left = None;
@@ -214,7 +216,7 @@ fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Result<f64, Error> {
                         Oper::Div => left_number / right_number,
                         Oper::Rem => left_number % right_number,
                         Oper::Exp => left_number.powf(right_number),
-                        _ => return Err(Error::new(ErrorType::UnknownError))
+                        _ => return Err(CalcError::new(CalcErrorType::UnknownError))
                     };
 
                     new_rpn_expr.push(Oper::Operand(result));
@@ -229,7 +231,7 @@ fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Result<f64, Error> {
             counter += 1;
         }
         Some(_) if right != None => {
-            return Err(Error::new(ErrorType::MissedOperation))
+            return Err(CalcError::new(CalcErrorType::MissedOperation))
         }
         _ => {}
     }
@@ -245,10 +247,10 @@ fn recursive_calculate(rpn_expr: &Vec<Oper>) -> Result<f64, Error> {
                     Oper::Operand(number) => {
                         return Ok(number);
                     },
-                    _ => return Err(Error::new(ErrorType::UnknownError))
+                    _ => return Err(CalcError::new(CalcErrorType::UnknownError))
                 }
             },
-            _ => return Err(Error::new(ErrorType::NotMathExpr))
+            _ => return Err(CalcError::new(CalcErrorType::NotMathExpr))
         }
     }
 }
