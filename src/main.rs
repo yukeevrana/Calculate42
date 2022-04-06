@@ -35,7 +35,7 @@ async fn main() {
 }
 
 #[derive(BotCommand, Clone)]
-#[command(rename = "lowercase", description = "Bot can calculate any (almost) mathematical expression. These commands are supported:")]
+#[command(rename = "lowercase", description = "Bot can calculate any (almost) mathematical expression. Just type it, like that: (2 + 2) * 2. These commands are supported:")]
 enum Command {
     #[command(description = "display this text.")]
     Help

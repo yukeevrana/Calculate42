@@ -4,7 +4,6 @@ mod calculate_error;
 pub use calculate_error::Error as CalcError;
 pub use calculate_error::ErrorType as CalcErrorType;
 
-// TODO: recursive enum with operations that contains other operations (use Box<T>)
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Oper {
     Add,
@@ -64,16 +63,14 @@ fn are_brackets_agreed(message: &String) -> bool {
     else { true }
 }
 
+/// Tries to convert text to number
 fn try_push_operand(operand: &mut String, stack: &mut Vec<Oper>) -> bool {
 
     if operand.chars().count() <= 15 { 
-        match operand.parse() {
-            Ok(n) => { 
-                stack.push(Oper::Operand(n));
-                operand.clear();
-                return true;
-            },
-            _ => {}
+        if let Ok(n) = operand.parse() {
+            stack.push(Oper::Operand(n));
+            operand.clear();
+            return true;
         }
     }
     false
