@@ -416,19 +416,19 @@ fn convert_numbers_with_plus_sub_and_many_brackets_correct() {
 #[test]
 fn convert_operand_before_an_operation_is_not_a_number() {
     use super::*;
-    assert_eq!(convert(&String::from("2 3 ..87 + 49 5")), Err(Error::new(ErrorType::OperandNotNumber)))
+    assert_eq!(convert(&String::from("2 3 ..87 + 49 5")), Err(CalcError::new(CalcErrorType::OperandNotNumber)))
 }
     
 #[test]
 fn convert_operand_before_a_bracket_is_not_a_number() {
     use super::*;
-    assert_eq!(convert(&String::from("(2 3 87 + 49.. 5)")), Err(Error::new(ErrorType::OperandNotNumber)))
+    assert_eq!(convert(&String::from("(2 3 87 + 49.. 5)")), Err(CalcError::new(CalcErrorType::OperandNotNumber)))
 }
     
 #[test]
 fn convert_last_operand_is_not_a_number() {
     use super::*;
-    assert_eq!(convert(&String::from("2 3 87 + 49.. 5")), Err(Error::new(ErrorType::OperandNotNumber)))
+    assert_eq!(convert(&String::from("2 3 87 + 49.. 5")), Err(CalcError::new(CalcErrorType::OperandNotNumber)))
 }
 
 #[test]
@@ -463,7 +463,7 @@ fn calculate_empty_expr() {
     use super::*;
     
     let rpn: Vec<Oper> = Vec::new();
-    assert_eq!(recursive_calculate(&rpn), Err(Error::new(ErrorType::NotMathExpr)));
+    assert_eq!(recursive_calculate(&rpn), Err(CalcError::new(CalcErrorType::NotMathExpr)));
 }
 
 #[test]
@@ -482,7 +482,7 @@ fn calculate_operands() {
     let mut rpn: Vec<Oper> = Vec::new();
     rpn.push(Oper::Operand(189.0));
     rpn.push(Oper::Operand(530.0));
-    assert_eq!(recursive_calculate(&rpn), Err(Error::new(ErrorType::MissedOperation)));
+    assert_eq!(recursive_calculate(&rpn), Err(CalcError::new(CalcErrorType::MissedOperation)));
 }
 
 #[test]
@@ -503,7 +503,7 @@ fn calculate_plus_too_few_operands() {
     let mut rpn: Vec<Oper> = Vec::new();
     rpn.push(Oper::Operand(189.0));
     rpn.push(Oper::Add);
-    assert_eq!(recursive_calculate(&rpn), Err(Error::new(ErrorType::MissedOperand)));
+    assert_eq!(recursive_calculate(&rpn), Err(CalcError::new(CalcErrorType::MissedOperand)));
 }
 
 #[test]
@@ -512,7 +512,7 @@ fn calculate_plus() {
     
     let mut rpn: Vec<Oper> = Vec::new();
     rpn.push(Oper::Add);
-    assert_eq!(recursive_calculate(&rpn), Err(Error::new(ErrorType::MissedOperand)));
+    assert_eq!(recursive_calculate(&rpn), Err(CalcError::new(CalcErrorType::MissedOperand)));
 }
 
 #[test]
@@ -524,7 +524,7 @@ fn calculate_plus_too_many_operands() {
     rpn.push(Oper::Operand(530.0));
     rpn.push(Oper::Operand(325.0));
     rpn.push(Oper::Add);
-    assert_eq!(recursive_calculate(&rpn), Err(Error::new(ErrorType::MissedOperation)));
+    assert_eq!(recursive_calculate(&rpn), Err(CalcError::new(CalcErrorType::MissedOperation)));
 }
 
 #[test]
@@ -536,7 +536,7 @@ fn calculate_plus_too_many_operations() {
     rpn.push(Oper::Operand(530.0));
     rpn.push(Oper::Add);
     rpn.push(Oper::Add);
-    assert_eq!(recursive_calculate(&rpn), Err(Error::new(ErrorType::MissedOperand)));
+    assert_eq!(recursive_calculate(&rpn), Err(CalcError::new(CalcErrorType::MissedOperand)));
 }
 
 #[test]
@@ -911,7 +911,7 @@ fn try_calculate_not_math_expr() {
     use super::*;
     
     let input = String::from("not a math expression");
-    assert_eq!(try_calculate(&input), Err(Error::new(ErrorType::NotMathExpr)));
+    assert_eq!(try_calculate(&input), Err(CalcError::new(CalcErrorType::NotMathExpr)));
 }
 
 #[test]
@@ -919,5 +919,5 @@ fn try_calculate_brackets_not_agreed() {
     use super::*;
     
     let input = String::from("(2 + 2(");
-    assert_eq!(try_calculate(&input), Err(Error::new(ErrorType::BracketsNotAgreed)));
+    assert_eq!(try_calculate(&input), Err(CalcError::new(CalcErrorType::BracketsNotAgreed)));
 }
